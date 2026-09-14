@@ -26,9 +26,16 @@ jobs:
             exit 0
           fi
           python - <<'PY'
-          import zipfile
-          with zipfile.ZipFile('source.zip') as z:
-              z.extractall('.')
+          import base64, pathlib, zipfile
+          p = pathlib.Path('source.zip')
+          try:
+              with zipfile.ZipFile(p) as z:
+                  z.extractall('.')
+          except zipfile.BadZipFile:
+              decoded = base64.b64decode(p.read_bytes())
+              p.write_bytes(decoded)
+              with zipfile.ZipFile(p) as z:
+                  z.extractall('.')
           PY
           rm source.zip
 
