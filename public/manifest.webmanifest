@@ -1,0 +1,11 @@
+{
+  "name": "Hajj Terminal Inventory",
+  "short_name": "Hajj Inventory",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#0f172a",
+  "icons": [
+    {"src":"/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
