@@ -62,6 +62,12 @@ function operationLabel(type: OperationType) {
   }[type];
 }
 
+function stockStatus(quantity: number, safetyStock: number) {
+  if (quantity <= 0) return { className: "out", label: "Out" };
+  if (quantity <= safetyStock) return { className: "low", label: "Low" };
+  return { className: "enough", label: "Enough" };
+}
+
 export default function InventoryApp() {
   const [records, setRecords] = useState<DailyRecord[]>([]);
   const [orders, setOrders] = useState<CloudOrder[]>([]);
@@ -461,13 +467,27 @@ export default function InventoryApp() {
               <strong>Each row:</strong> physical count → immediate receiving/top-up.
             </div>
 
+            <div className="stock-legend" aria-label="Stock colour guide">
+              <span><i className="stock-dot enough" />Enough</span>
+              <span><i className="stock-dot low" />Low</span>
+              <span><i className="stock-dot out" />Out</span>
+            </div>
+
             {CATEGORIES.map(cat => (
               <div className="category" key={cat}>
                 <h3>{cat}</h3>
                 <div className="grid2">
-                  {PRODUCTS.filter(p => p.category === cat).map(p => (
-                    <div className="product-row" key={p.id}>
-                      <div className="name">{p.name}</div>
+                  {PRODUCTS.filter(p => p.category === cat).map(p => {
+                    const current = (physical[p.id] || 0) + (receiving[p.id] || 0);
+                    const state = stockStatus(current, p.safetyStock);
+                    return (
+                    <div className={`product-row stock-${state.className}`} key={p.id}>
+                      <div className="name">
+                        {p.name}
+                        <small className={`stock-label ${state.className}`}>
+                          <i className={`stock-dot ${state.className}`} />{state.label}
+                        </small>
+                      </div>
                       <input
                         aria-label={`${p.name} physical`}
                         type="number"
@@ -483,7 +503,7 @@ export default function InventoryApp() {
                         onChange={e => setQ(setReceiving, p.id, Number(e.target.value))}
                       />
                     </div>
-                  ))}
+                  )})}
                 </div>
               </div>
             ))}
