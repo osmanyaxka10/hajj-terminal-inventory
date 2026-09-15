@@ -80,7 +80,6 @@ export default function InventoryApp() {
   const [time, setTime] = useState(nowTime());
   const [reportedBy, setReportedBy] = useState("Vignesh");
   const [physical, setPhysical] = useState<QuantityMap>(emptyMap());
-  const [receiving, setReceiving] = useState<QuantityMap>(emptyMap());
 
   const [quick, setQuick] = useState("");
   const [mode, setMode] = useState<"tomorrow" | "weekly" | "weekend" | "emergency">("tomorrow");
@@ -201,7 +200,7 @@ export default function InventoryApp() {
       time,
       reportedBy: reportedBy || "Vignesh",
       physical: { ...physical },
-      receiving: { ...receiving },
+      receiving: emptyMap(),
       transferIn: emptyMap(),
       transferOut: emptyMap(),
       waste: emptyMap(),
@@ -219,11 +218,10 @@ export default function InventoryApp() {
           time,
           reportedBy: reportedBy || "Vignesh",
           physical,
-          receiving
+          receiving: emptyMap()
         });
         await refreshCloud();
         setPhysical(emptyMap());
-        setReceiving(emptyMap());
         alert("Daily count saved to Supabase.");
       } catch (e: any) {
         setStatus("Cloud save failed • nothing was silently overwritten");
@@ -235,7 +233,6 @@ export default function InventoryApp() {
       setRecords(next);
       saveRecords(next);
       setPhysical(emptyMap());
-      setReceiving(emptyMap());
       alert("Saved locally. Sign in later to use cloud.");
     }
   }
@@ -437,9 +434,9 @@ export default function InventoryApp() {
           <section className="card">
             <div className="section-head">
               <div>
-                <h2>Daily count & immediate receiving</h2>
+                <h2>Tonight&apos;s available stock</h2>
                 <p className="muted">
-                  Physical stock first. Any delivery after the count is recorded separately.
+                  Enter the physical quantity reported by the Hajj Terminal night shift.
                 </p>
               </div>
               <div className="actions" style={{ marginTop: 0 }}>
@@ -464,7 +461,7 @@ export default function InventoryApp() {
             </div>
 
             <div className="notice">
-              <strong>Each row:</strong> physical count → immediate receiving/top-up.
+              <strong>One box per item:</strong> enter only the available stock now. Record deliveries under Operations.
             </div>
 
             <div className="stock-legend" aria-label="Stock colour guide">
@@ -478,10 +475,10 @@ export default function InventoryApp() {
                 <h3>{cat}</h3>
                 <div className="grid2">
                   {PRODUCTS.filter(p => p.category === cat).map(p => {
-                    const current = (physical[p.id] || 0) + (receiving[p.id] || 0);
+                    const current = physical[p.id] || 0;
                     const state = stockStatus(current, p.safetyStock);
                     return (
-                    <div className={`product-row stock-${state.className}`} key={p.id}>
+                    <div className={`product-row count-row stock-${state.className}`} key={p.id}>
                       <div className="name">
                         {p.name}
                         <small className={`stock-label ${state.className}`}>
@@ -494,13 +491,6 @@ export default function InventoryApp() {
                         min="0"
                         value={physical[p.id] || 0}
                         onChange={e => setQ(setPhysical, p.id, Number(e.target.value))}
-                      />
-                      <input
-                        aria-label={`${p.name} receiving`}
-                        type="number"
-                        min="0"
-                        value={receiving[p.id] || 0}
-                        onChange={e => setQ(setReceiving, p.id, Number(e.target.value))}
                       />
                     </div>
                   )})}
@@ -516,10 +506,9 @@ export default function InventoryApp() {
                 className="btn"
                 onClick={() => {
                   setPhysical(emptyMap());
-                  setReceiving(emptyMap());
                 }}
               >
-                Clear
+                Clear all
               </button>
             </div>
           </section>
