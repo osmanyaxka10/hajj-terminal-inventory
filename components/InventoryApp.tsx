@@ -28,6 +28,7 @@ import {
 } from "@/lib/cloud";
 import { supabase } from "@/lib/supabase";
 import AuthPanel from "./AuthPanel";
+import ExpiryBoard from "./ExpiryBoard";
 import type {
   CloudOrder,
   DailyRecord,
@@ -41,7 +42,7 @@ import { openGoogleCalendarDraft } from "@/lib/calendar";
 import { downloadFullBackup } from "@/lib/backup";
 import { askInventoryAI } from "@/lib/ai";
 
-type Tab = "count" | "operations" | "movement" | "reports" | "orders" | "intelligence" | "assistant" | "quick" | "history";
+type Tab = "count" | "expiry" | "operations" | "movement" | "reports" | "orders" | "intelligence" | "assistant" | "quick" | "history";
 
 function nowDate() {
   const d = new Date();
@@ -412,7 +413,7 @@ export default function InventoryApp() {
 
         <nav className="tabs">
           {(
-            ["count", "operations", "movement", "reports", "orders", "intelligence", "assistant", "quick", "history"] as Tab[]
+            ["count", "expiry", "operations", "movement", "reports", "orders", "intelligence", "assistant", "quick", "history"] as Tab[]
           ).map(x => (
             <button
               key={x}
@@ -501,6 +502,8 @@ export default function InventoryApp() {
             </div>
           </section>
         )}
+
+        {tab === "expiry" && <ExpiryBoard />}
 
         {tab === "operations" && (
           <section className="card">
