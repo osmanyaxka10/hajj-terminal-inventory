@@ -1,0 +1,57 @@
+-- Expand the Hajj Terminal catalogue while preserving existing product codes/history.
+alter table public.hajj_products drop constraint if exists hajj_products_category_check;
+alter table public.hajj_products add constraint hajj_products_category_check check (
+  category in ('Sandwiches','Cakes','Cheesecakes','Croissants','Donuts & Brownies','Cookies','Muffins','Puddings','Ice Cream')
+);
+
+insert into public.hajj_products(code,name,category,shelf_life_days,safety_stock,target_days) values
+('fajita','Chicken Fajita Wrap','Sandwiches',5,18,1.5),
+('tuna','Tuna Spicy Cheese Ciabatta','Sandwiches',5,6,1.5),
+('halloumi','Halloumi Pesto Baguette','Sandwiches',5,6,1.5),
+('turkey','Turkey & Cheese Baguette','Sandwiches',5,6,1.5),
+('ranch','Chicken Ranch Club','Sandwiches',5,5,1.5),
+('caesar','Chicken Caesar Club','Sandwiches',5,5,1.5),
+('three_cheese','3 Cheese Club','Sandwiches',5,5,1.5),
+('dynamite','Dynamite Grill Chicken','Sandwiches',5,5,1.5),
+('fajita_small','Chicken Fajita Sandwich Small','Sandwiches',7,4,1.5),
+('turkey_small','Turkey Cheese Sandwich Small','Sandwiches',7,4,1.5),
+('tuna_small','Tuna Sandwich Small','Sandwiches',7,4,1.5),
+('halloumi_small','Halloumi Sandwich Small','Sandwiches',7,4,1.5),
+('lemon','Lemon English Cake','Cakes',14,4,2),
+('date','Date English Cake','Cakes',14,4,2),
+('sacher','Sacher Cake','Cakes',14,3,2),
+('date_cheesecake','Date Cheesecake','Cheesecakes',14,2,2),
+('blueberry_cheesecake','Blueberry Cheesecake','Cheesecakes',90,2,2),
+('lemon_cheesecake','Lemon Cheesecake','Cheesecakes',90,2,2),
+('lotus_cheesecake','Lotus Cheesecake','Cheesecakes',90,2,2),
+('tiramisu_cheesecake','Tiramisu Cheesecake','Cheesecakes',90,2,2),
+('croissant_yellow','Croissant Yellow Cheese','Croissants',4,3,1.5),
+('croissant_white','Croissant White Cheese','Croissants',4,3,1.5),
+('croissant_chocolate','Croissant Chocolate','Croissants',4,3,1.5),
+('croissant_plain','Croissant Plain','Croissants',4,3,1.5),
+('croissant_small_butter','Small Butter Croissant','Croissants',4,3,1.5),
+('croissant_small_white','Small White Cheese Croissant','Croissants',4,3,1.5),
+('croissant_small_yellow','Small Yellow Cheese Croissant','Croissants',4,3,1.5),
+('croissant_small_chocolate','Small Chocolate Croissant','Croissants',4,3,1.5),
+('cinnamon_donut','Cinnamon Donut','Donuts & Brownies',30,2,2),
+('cookies_donut','Cookies Donut','Donuts & Brownies',30,2,2),
+('nutty_donut','Nutty Donut','Donuts & Brownies',30,2,2),
+('frosted_brownie','Frosted Brownie','Donuts & Brownies',30,2,2),
+('cookies_chocolate','Cookies Chocolate','Cookies',30,2,2),
+('cookies_vanilla','Cookies Vanilla','Cookies',30,2,2),
+('muffin_chocolate','Chocolate Muffin','Muffins',60,2,2),
+('muffin_blueberry','Blueberry Muffin','Muffins',60,2,2),
+('muffin_carrot','Carrot Muffin','Muffins',60,2,2),
+('lotus_pudding','Lotus Pudding','Puddings',30,2,2),
+('cookies_pudding','Cookies Pudding','Puddings',30,2,2),
+('chocolate_pudding','Chocolate Pudding','Puddings',30,2,2),
+('kunafa_pudding','Kunafa Pudding','Puddings',30,2,2),
+('ice_cream_vanilla','Vanilla Ice Cream','Ice Cream',180,2,3),
+('ice_cream_strawberry','Strawberry Ice Cream','Ice Cream',180,2,3)
+on conflict(code) do update set
+  name=excluded.name,
+  category=excluded.category,
+  shelf_life_days=excluded.shelf_life_days,
+  safety_stock=excluded.safety_stock,
+  target_days=excluded.target_days,
+  active=true;
