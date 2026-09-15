@@ -54,9 +54,7 @@ function productName(id: string) {
 }
 function operationLabel(type: OperationType) {
   return {
-    receiving: "Receiving",
-    transfer_in: "Transfer In",
-    transfer_out: "Transfer Out",
+    receiving: "Warehouse Receiving",
     waste: "Waste",
     adjustment: "Adjustment"
   }[type];
@@ -76,7 +74,7 @@ export default function InventoryApp() {
   const [receiving, setReceiving] = useState<QuantityMap>(emptyMap());
 
   const [quick, setQuick] = useState("");
-  const [mode, setMode] = useState<"tomorrow" | "weekend" | "emergency">("tomorrow");
+  const [mode, setMode] = useState<"tomorrow" | "weekly" | "weekend" | "emergency">("tomorrow");
   const [approved, setApproved] = useState<QuantityMap>(emptyMap());
 
   const [opType, setOpType] = useState<OperationType>("receiving");
@@ -235,7 +233,7 @@ export default function InventoryApp() {
       alert("Enter at least one quantity.");
       return;
     }
-    if ((opType === "transfer_out" || opType === "waste") && latest) {
+    if (opType === "waste" && latest) {
       const over = entered.find(p => Math.abs(Number(opQty[p.id])) > finalStock(latest, p.id));
       if (over) {
         alert(`${over.name} quantity is higher than current stock (${finalStock(latest, over.id)}). Enter a stock adjustment first if the physical stock is different.`);
@@ -254,14 +252,14 @@ export default function InventoryApp() {
       const next = records.map(r => {
         if (r.id !== latest.id) return r;
         const updated: DailyRecord = { ...r };
-        const field = opType === "transfer_in" ? "transferIn" : opType === "transfer_out" ? "transferOut" : opType;
+        const field = opType;
         if (field === "adjustment") {
           updated.adjustments = { ...r.adjustments };
           entered.forEach(p => {
             updated.adjustments[p.id] = Number(updated.adjustments[p.id] || 0) + Number(opQty[p.id] || 0);
           });
         } else {
-          const key = field as "receiving" | "transferIn" | "transferOut" | "waste";
+          const key = field as "receiving" | "waste";
           updated[key] = { ...r[key] };
           entered.forEach(p => {
             updated[key][p.id] = Number(updated[key][p.id] || 0) + Math.abs(Number(opQty[p.id] || 0));
@@ -504,7 +502,7 @@ export default function InventoryApp() {
               <div>
                 <h2>Inventory operations</h2>
                 <p className="muted">
-                  Receiving, transfers, waste and corrections are written to the exact event ledger.
+                  Receiving from Bakery Warehouse, waste and corrections are written to the exact event ledger.
                 </p>
               </div>
             </div>
@@ -513,9 +511,7 @@ export default function InventoryApp() {
               <label className="stack">
                 Operation
                 <select value={opType} onChange={e => setOpType(e.target.value as OperationType)}>
-                  <option value="receiving">Receiving</option>
-                  <option value="transfer_in">Transfer In</option>
-                  <option value="transfer_out">Transfer Out</option>
+                  <option value="receiving">Receive from Bakery Warehouse</option>
                   <option value="waste">Waste</option>
                   <option value="adjustment">Adjustment</option>
                 </select>
@@ -532,12 +528,8 @@ export default function InventoryApp() {
 
             <div className="grid2" style={{ marginTop: 10 }}>
               <label className="stack">
-                {opType === "receiving"
-                  ? "Supplier"
-                  : opType.startsWith("transfer")
-                  ? "Other branch / source"
-                  : "Label"}
-                <input value={opLabel} onChange={e => setOpLabel(e.target.value)} />
+                {opType === "receiving" ? "Source" : "Label"}
+                <input value={opType === "receiving" ? "Bakery Warehouse" : opLabel} disabled={opType === "receiving"} onChange={e => setOpLabel(e.target.value)} />
               </label>
               <label className="stack">
                 Reason / notes
@@ -602,6 +594,8 @@ export default function InventoryApp() {
                     <th>3-day</th>
                     <th>7-day</th>
                     <th>14-day</th>
+                    <th>This week</th>
+                    <th>Previous weekly avg</th>
                     <th>Days left</th>
                     <th>Status</th>
                   </tr>
@@ -622,6 +616,8 @@ export default function InventoryApp() {
                       <td>{r.avg3.toFixed(1)}</td>
                       <td>{r.avg7.toFixed(1)}</td>
                       <td>{r.avg14.toFixed(1)}</td>
+                      <td><strong>{r.weeklyMovement.toFixed(0)}</strong></td>
+                      <td>{r.previousWeeklyAverage.toFixed(1)}</td>
                       <td>{r.daysRemaining?.toFixed(1) ?? "—"}</td>
                       <td>
                         <span
@@ -662,6 +658,12 @@ export default function InventoryApp() {
 
             <div className="actions">
               <button
+                className={`btn ${mode === "weekly" ? "primary" : ""}`}
+                onClick={() => setMode("weekly")}
+              >
+                Next 7 days
+              </button>
+              <button
                 className={`btn ${mode === "tomorrow" ? "primary" : ""}`}
                 onClick={() => setMode("tomorrow")}
               >
@@ -693,6 +695,8 @@ export default function InventoryApp() {
                     <th>Item</th>
                     <th>Current</th>
                     <th>Forecast</th>
+                    <th>Weekly movement</th>
+                    <th>Speed</th>
                     <th>Safety</th>
                     <th>Target</th>
                     <th>Recommend</th>
@@ -706,6 +710,8 @@ export default function InventoryApp() {
                       <td>{productName(r.productId)}</td>
                       <td>{r.current}</td>
                       <td>{r.forecast.toFixed(1)}</td>
+                      <td>{r.weeklyMovement.toFixed(0)}</td>
+                      <td><span className={`badge ${r.velocity === "Fast" ? "fast" : r.velocity === "Slow" || r.velocity === "No movement" ? "slow" : "ok"}`}>{r.velocity}</span></td>
                       <td>{r.safety}</td>
                       <td>{r.target}</td>
                       <td><strong>{r.recommended}</strong></td>
