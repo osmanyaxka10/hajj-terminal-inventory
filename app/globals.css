@@ -22,3 +22,5 @@ pre{white-space:pre-wrap;background:#0f172a;color:#e2e8f0;padding:12px;border-ra
 .operation-row input{font-weight:700}
 .auth-card{max-width:760px;margin:24px auto}
 .tbl input{border:1px solid var(--line);border-radius:8px;text-align:center}
+.report-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}.report-summary div{padding:12px;border:1px solid var(--line);border-radius:12px}.report-summary span{display:block;color:var(--muted);font-size:12px}.report-summary strong{font-size:24px}.movement-chart{overflow-x:auto;border:1px solid var(--line);border-radius:12px;padding:8px;background:#fff}.movement-chart svg{display:block;width:100%;min-width:640px;height:280px}.chart-grid{stroke:#e2e8f0;stroke-width:1}.chart-line{fill:none;stroke:#0f766e;stroke-width:4;stroke-linejoin:round;stroke-linecap:round}.chart-dot{fill:#0f766e}.movement-chart text{fill:#64748b;font-size:11px}
+@media(max-width:760px){.report-summary{grid-template-columns:1fr}}
