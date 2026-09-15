@@ -416,6 +416,33 @@ export default function InventoryApp() {
           <div className="metric accent"><span>Grand total</span><strong>{totalAll}</strong></div>
         </section>
 
+        <section className="card available-board">
+          <div className="section-head">
+            <div>
+              <h2>Available stock by item</h2>
+              <p className="muted">Latest count plus receiving, waste and adjustments.</p>
+            </div>
+            <button className="btn" onClick={refreshCloud}>Refresh</button>
+          </div>
+          {latest ? CATEGORIES.map(category => (
+            <div className="available-category" key={category}>
+              <h3>{category}</h3>
+              <div className="available-grid">
+                {PRODUCTS.filter(product => product.category === category).map(product => {
+                  const quantity = finalStock(latest, product.id);
+                  const state = stockStatus(quantity, product.safetyStock);
+                  return (
+                    <div className={`available-item ${state.className}`} key={product.id}>
+                      <span>{product.name}</span>
+                      <strong>{quantity}</strong>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )) : <div className="notice">No stock saved yet. Enter tonight&apos;s count below.</div>}
+        </section>
+
         <nav className="tabs">
           {(
             ["count", "expiry", "operations", "movement", "reports", "orders", "intelligence", "assistant", "quick", "history"] as Tab[]
