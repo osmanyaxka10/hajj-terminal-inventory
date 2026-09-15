@@ -1,4 +1,13 @@
-export type Category = "Sandwiches" | "Cakes" | "Croissants";
+export type Category =
+  | "Sandwiches"
+  | "Cakes"
+  | "Cheesecakes"
+  | "Croissants"
+  | "Donuts & Brownies"
+  | "Cookies"
+  | "Muffins"
+  | "Puddings"
+  | "Ice Cream";
 
 export type Product = {
   id: string;
