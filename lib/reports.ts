@@ -67,7 +67,7 @@ export function exportOrderCsv(
     ["Product","Current","Forecast","Safety","Target","Recommended","Approved","Confidence","Explanation"],
     ...recommendations.map(r=>[
       PRODUCTS.find(p=>p.id===r.productId)?.name || r.productId,
-      r.current,r.forecast.toFixed(2),r.safety,r.target,r.recommended,approved[r.productId]||0,r.confidence,r.explanation
+      r.current,r.forecast.toFixed(2),r.weeklyMovement,r.velocity,r.safety,r.target,r.recommended,approved[r.productId]||0,r.confidence,r.explanation
     ])
   ];
   download(`hajj-${mode}-order-${date}.csv`, lines.map(r=>r.map(csvCell).join(",")).join("\n"));
