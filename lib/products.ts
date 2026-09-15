@@ -3,10 +3,6 @@ import type { Category, Product } from "./types";
 export const CATEGORIES: Category[] = ["Sandwiches", "Cakes", "Croissants"];
 
 export const PRODUCTS: Product[] = [
-  {id:"fajita",name:"Chicken Fajita Wrap",category:"Sandwiches",shelfLifeDays:5,safetyStock:18,targetDays:1.5,active:true},
-  {id:"tuna",name:"Tuna Spicy Cheese Ciabatta",category:"Sandwiches",shelfLifeDays:5,safetyStock:6,targetDays:1.5,active:true},
-  {id:"halloumi",name:"Halloumi Pesto Baguette",category:"Sandwiches",shelfLifeDays:5,safetyStock:6,targetDays:1.5,active:true},
-  {id:"turkey",name:"Turkey & Cheese Baguette",category:"Sandwiches",shelfLifeDays:5,safetyStock:6,targetDays:1.5,active:true},
   {id:"ranch",name:"Chicken Ranch Club",category:"Sandwiches",shelfLifeDays:5,safetyStock:5,targetDays:1.5,active:true},
   {id:"caesar",name:"Chicken Caesar Club",category:"Sandwiches",shelfLifeDays:5,safetyStock:5,targetDays:1.5,active:true},
   {id:"three_cheese",name:"3 Cheese Club",category:"Sandwiches",shelfLifeDays:5,safetyStock:5,targetDays:1.5,active:true},
@@ -27,10 +23,6 @@ export const PRODUCTS: Product[] = [
 ];
 
 export const ALIASES: Record<string,string> = {
-  "fajita":"fajita","chicken fajita":"fajita","chicken fajita wrap":"fajita",
-  "tuna":"tuna","tuna spicy":"tuna","tuna spicy cheese ciabatta":"tuna",
-  "halloumi":"halloumi","halloumi pesto":"halloumi","halloumi pesto baguette":"halloumi",
-  "turkey":"turkey","turkey cheese":"turkey","turkey & cheese":"turkey","turkey & cheese baguette":"turkey",
   "ranch":"ranch","chicken ranch":"ranch","chicken ranch club":"ranch",
   "caesar":"caesar","caeser":"caesar","chicken caesar":"caesar","chicken ceasr club":"caesar",
   "3 cheese":"three_cheese","three cheese":"three_cheese","3 cheese club":"three_cheese",
