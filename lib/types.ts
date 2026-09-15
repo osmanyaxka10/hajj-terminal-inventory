@@ -38,6 +38,8 @@ export type MovementRow = {
   avg3: number;
   avg7: number;
   avg14: number;
+  weeklyMovement: number;
+  previousWeeklyAverage: number;
   trend: "Fast" | "Normal" | "Slow" | "Insufficient";
   daysRemaining: number | null;
 };
@@ -52,12 +54,15 @@ export type OrderRecommendation = {
   confidence: "High" | "Medium" | "Low";
   explanation: string;
   forecastBreakdown: { date: string; value: number }[];
+  weeklyMovement: number;
+  previousWeeklyAverage: number;
+  velocity: "Fast" | "Normal" | "Slow" | "No movement" | "Insufficient";
 };
 
 export type CloudOrder = {
   id: string;
   orderFor: string;
-  orderType: "tomorrow" | "weekend" | "emergency";
+  orderType: "tomorrow" | "weekly" | "weekend" | "emergency";
   status: string;
   approvedAt: string | null;
   createdAt: string;
@@ -66,8 +71,6 @@ export type CloudOrder = {
 
 export type OperationType =
   | "receiving"
-  | "transfer_in"
-  | "transfer_out"
   | "waste"
   | "adjustment";
 
