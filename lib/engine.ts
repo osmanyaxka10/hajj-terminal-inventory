@@ -78,6 +78,25 @@ export function avg(values: number[], days: number): number {
   return v.length ? v.reduce((s, x) => s + x, 0) / v.length : 0;
 }
 
+export function weeklyVelocity(records: DailyRecord[], productId: string) {
+  const values = movementHistory(records, productId);
+  const latest = values.slice(-7);
+  const previous = values.slice(-35, -7);
+  const weeklyMovement = latest.reduce((sum, value) => sum + value, 0);
+  const previousWeeklyAverage = previous.length
+    ? previous.reduce((sum, value) => sum + value, 0) / (previous.length / 7)
+    : 0;
+  let velocity: "Fast" | "Normal" | "Slow" | "No movement" | "Insufficient" = "Insufficient";
+  if (latest.length >= 3) {
+    if (weeklyMovement === 0) velocity = "No movement";
+    else if (!previous.length) velocity = "Normal";
+    else if (weeklyMovement > previousWeeklyAverage * 1.2) velocity = "Fast";
+    else if (weeklyMovement < previousWeeklyAverage * 0.8) velocity = "Slow";
+    else velocity = "Normal";
+  }
+  return { weeklyMovement, previousWeeklyAverage, velocity };
+}
+
 function dateWeekday(date: string): number {
   // noon avoids timezone edge cases
   return new Date(`${date}T12:00:00`).getDay();
@@ -169,6 +188,7 @@ export function movementRows(records: DailyRecord[]): MovementRow[] {
 
     const current = cur ? finalStock(cur, p.id) : 0;
     const daily = avg7 || avg3 || avg14;
+    const weekly = weeklyVelocity(records, p.id);
 
     return {
       productId: p.id,
@@ -180,6 +200,8 @@ export function movementRows(records: DailyRecord[]): MovementRow[] {
       avg3,
       avg7,
       avg14,
+      weeklyMovement: weekly.weeklyMovement,
+      previousWeeklyAverage: weekly.previousWeeklyAverage,
       trend,
       daysRemaining: daily > 0 ? current / daily : null
     };
@@ -195,7 +217,7 @@ function nextOrSameWeekday(date: string, weekday: number): string {
 
 export function recommendedOrderDate(
   records: DailyRecord[],
-  mode: "tomorrow" | "weekend" | "emergency"
+  mode: "tomorrow" | "weekly" | "weekend" | "emergency"
 ): string {
   const latest = sorted(records).at(-1);
   const base = latest?.date || new Date().toISOString().slice(0, 10);
@@ -206,7 +228,7 @@ export function recommendedOrderDate(
 
 export function recommend(
   records: DailyRecord[],
-  mode: "tomorrow" | "weekend" | "emergency"
+  mode: "tomorrow" | "weekly" | "weekend" | "emergency"
 ): OrderRecommendation[] {
   const cur = sorted(records).at(-1);
   if (!cur) return [];
@@ -224,6 +246,15 @@ export function recommend(
     let forecastBreakdown = [{ date: tomorrow, value: one.value }];
     let confidence = one.confidence;
     let forecastExplanation = one.explanation;
+
+    if (mode === "weekly") {
+      forecastBreakdown = Array.from({ length: 7 }, (_, index) => {
+        const date = addDays(baseDate, index + 1);
+        return { date, value: forecastForDate(records, p.id, date).value };
+      });
+      forecast = forecastBreakdown.reduce((sum, day) => sum + day.value, 0);
+      forecastExplanation = `Seven-day demand forecast from ${forecastBreakdown[0].date} to ${forecastBreakdown[6].date}.`;
+    }
 
     if (mode === "weekend") {
       const thu = forecastForDate(records, p.id, thursday);
@@ -271,7 +302,8 @@ export function recommend(
       explanation,
       forecastBreakdown: mode === "emergency"
         ? [{ date: baseDate, value: one.value }]
-        : forecastBreakdown
+        : forecastBreakdown,
+      ...weeklyVelocity(records, p.id)
     };
   });
 }
