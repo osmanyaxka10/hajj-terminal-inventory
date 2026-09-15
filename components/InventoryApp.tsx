@@ -138,8 +138,11 @@ export default function InventoryApp() {
         saveRecords(cloud);
         setStatus(`Cloud synced • ${cloud.length} counts • exact event ledger active`);
       } else {
-        setRecords(loadRecords());
-        setStatus("Cloud connected • no cloud counts yet • local history shown");
+        // A signed-in account with no cloud counts starts clean. Never mix the
+        // bundled/local demonstration history into a new operational ledger.
+        setRecords([]);
+        saveRecords([]);
+        setStatus("Cloud connected • ready for today's first physical count");
       }
       setOrders(cloudOrders);
     } catch (e) {
