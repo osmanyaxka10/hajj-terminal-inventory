@@ -3,19 +3,19 @@ import type { Category, Product } from "./types";
 export const CATEGORIES: Category[] = ["Sandwiches", "Cakes", "Croissants"];
 
 export const PRODUCTS: Product[] = [
-  {id:"ranch",name:"Chicken Ranch Club Sandwich",category:"Sandwiches",shelfLifeDays:5,safetyStock:5,targetDays:1.5,active:true},
-  {id:"caesar",name:"Caesar Chicken Club Sandwich",category:"Sandwiches",shelfLifeDays:5,safetyStock:5,targetDays:1.5,active:true},
-  {id:"three_cheese",name:"3 Cheese Club Sandwich",category:"Sandwiches",shelfLifeDays:5,safetyStock:5,targetDays:1.5,active:true},
-  {id:"fajita_small",name:"Chicken Fajita Sandwich Small",category:"Sandwiches",shelfLifeDays:5,safetyStock:4,targetDays:1.5,active:true},
-  {id:"turkey_small",name:"Turkey Cheese Sandwich Small",category:"Sandwiches",shelfLifeDays:5,safetyStock:4,targetDays:1.5,active:true},
-  {id:"tuna_small",name:"Tuna Sandwich Small",category:"Sandwiches",shelfLifeDays:5,safetyStock:4,targetDays:1.5,active:true},
-  {id:"halloumi_small",name:"Halloumi Sandwich Small",category:"Sandwiches",shelfLifeDays:5,safetyStock:4,targetDays:1.5,active:true},
-  {id:"lemon",name:"English Lemon Cake",category:"Cakes",shelfLifeDays:14,safetyStock:4,targetDays:2,active:true},
-  {id:"date",name:"English Dates Cake",category:"Cakes",shelfLifeDays:14,safetyStock:4,targetDays:2,active:true},
-  {id:"croissant_small_butter",name:"Croissant Small Butter",category:"Croissants",shelfLifeDays:4,safetyStock:3,targetDays:1.5,active:true},
-  {id:"croissant_small_white",name:"Croissant Small White Cheese",category:"Croissants",shelfLifeDays:4,safetyStock:3,targetDays:1.5,active:true},
-  {id:"croissant_small_yellow",name:"Croissant Small Yellow Cheese",category:"Croissants",shelfLifeDays:4,safetyStock:3,targetDays:1.5,active:true},
-  {id:"croissant_small_chocolate",name:"Croissant Small Chocolate",category:"Croissants",shelfLifeDays:4,safetyStock:3,targetDays:1.5,active:true}
+  {id:"ranch",name:"Chicken Ranch Club Sandwich",category:"Sandwiches",shelfLifeDays:6,safetyStock:5,targetDays:1.5,active:true},
+  {id:"caesar",name:"Caesar Chicken Club Sandwich",category:"Sandwiches",shelfLifeDays:6,safetyStock:5,targetDays:1.5,active:true},
+  {id:"three_cheese",name:"3 Cheese Club Sandwich",category:"Sandwiches",shelfLifeDays:6,safetyStock:5,targetDays:1.5,active:true},
+  {id:"fajita_small",name:"Chicken Fajita Sandwich Small",category:"Sandwiches",shelfLifeDays:6,safetyStock:4,targetDays:1.5,active:true},
+  {id:"turkey_small",name:"Turkey Cheese Sandwich Small",category:"Sandwiches",shelfLifeDays:6,safetyStock:4,targetDays:1.5,active:true},
+  {id:"tuna_small",name:"Tuna Sandwich Small",category:"Sandwiches",shelfLifeDays:6,safetyStock:4,targetDays:1.5,active:true},
+  {id:"halloumi_small",name:"Halloumi Sandwich Small",category:"Sandwiches",shelfLifeDays:6,safetyStock:4,targetDays:1.5,active:true},
+  {id:"lemon",name:"English Lemon Cake",category:"Cakes",shelfLifeDays:6,safetyStock:4,targetDays:2,active:true},
+  {id:"date",name:"English Dates Cake",category:"Cakes",shelfLifeDays:6,safetyStock:4,targetDays:2,active:true},
+  {id:"croissant_small_butter",name:"Croissant Small Butter",category:"Croissants",shelfLifeDays:6,safetyStock:3,targetDays:1.5,active:true},
+  {id:"croissant_small_white",name:"Croissant Small White Cheese",category:"Croissants",shelfLifeDays:6,safetyStock:3,targetDays:1.5,active:true},
+  {id:"croissant_small_yellow",name:"Croissant Small Yellow Cheese",category:"Croissants",shelfLifeDays:6,safetyStock:3,targetDays:1.5,active:true},
+  {id:"croissant_small_chocolate",name:"Croissant Small Chocolate",category:"Croissants",shelfLifeDays:6,safetyStock:3,targetDays:1.5,active:true}
 ];
 
 export const ALIASES: Record<string,string> = {
