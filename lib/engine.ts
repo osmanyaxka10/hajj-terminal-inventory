@@ -73,6 +73,31 @@ export function movementHistory(records: DailyRecord[], productId: string): numb
   return movementSeries(records, productId).map(x => x.value);
 }
 
+export function movementReport(records: DailyRecord[], days: 7 | 30) {
+  const latestDate = sorted(records).at(-1)?.date;
+  if (!latestDate) return { daily: [], products: [] };
+  const startDate = addDays(latestDate, -(days - 1));
+  const dailyMap = new Map<string, number>();
+  const productTotals = new Map<string, number>();
+  for (const product of PRODUCTS) {
+    for (const point of movementSeries(records, product.id)) {
+      if (point.date < startDate || point.date > latestDate) continue;
+      dailyMap.set(point.date, (dailyMap.get(point.date) || 0) + point.value);
+      productTotals.set(product.id, (productTotals.get(product.id) || 0) + point.value);
+    }
+  }
+  return {
+    daily: Array.from({ length: days }, (_, index) => {
+      const date = addDays(startDate, index);
+      return { date, movement: dailyMap.get(date) || 0 };
+    }),
+    products: PRODUCTS.map(product => ({
+      productId: product.id,
+      movement: productTotals.get(product.id) || 0
+    })).sort((a, b) => b.movement - a.movement)
+  };
+}
+
 export function avg(values: number[], days: number): number {
   const v = values.slice(-days);
   return v.length ? v.reduce((s, x) => s + x, 0) / v.length : 0;
