@@ -21,14 +21,14 @@ type CountRow = {
 type LedgerRow = {
   product_id: string;
   quantity_delta: number;
-  event_type: OperationType;
+  event_type: OperationType | "transfer_in" | "transfer_out";
   occurred_at: string;
   label: string | null;
 };
 type OrderRow = {
   id: string;
   order_for: string;
-  order_type: "tomorrow" | "weekend" | "emergency";
+  order_type: "tomorrow" | "weekly" | "weekend" | "emergency";
   status: string;
   approved_at: string | null;
   created_at: string;
@@ -282,32 +282,6 @@ export async function saveCloudOperation(input: {
     if (itemError) throw itemError;
   }
 
-  if (input.type === "transfer_in" || input.type === "transfer_out") {
-    const isIn = input.type === "transfer_in";
-    const { data: parent, error } = await supabase
-      .from("hajj_transfers")
-      .insert({
-        source_location_id: isIn ? null : locationId,
-        destination_location_id: isIn ? locationId : null,
-        source_label: isIn ? input.label || "Bakery / branch" : "Hajj Terminal",
-        destination_label: isIn ? "Hajj Terminal" : input.label || "Branch",
-        transferred_at: occurredAt,
-        notes: input.reason || null
-      })
-      .select("id")
-      .single();
-    if (error) throw error;
-
-    const { error: itemError } = await supabase.from("hajj_transfer_items").insert(
-      nonZero.map(p => ({
-        transfer_id: parent.id,
-        product_id: productIdByCode.get(p.id)!,
-        quantity: Math.abs(Number(input.quantities[p.id] || 0))
-      }))
-    );
-    if (itemError) throw itemError;
-  }
-
   if (input.type === "waste") {
     const { data: parent, error } = await supabase
       .from("hajj_waste")
@@ -361,7 +335,7 @@ export async function saveCloudOperation(input: {
 
 export async function saveApprovedOrder(input: {
   orderFor: string;
-  orderType: "tomorrow" | "weekend" | "emergency";
+  orderType: "tomorrow" | "weekly" | "weekend" | "emergency";
   recommendations: OrderRecommendation[];
   approved: QuantityMap;
   notes?: string;
