@@ -1,4 +1,4 @@
-import { PRODUCTS } from "./products";
+import { CATEGORIES, PRODUCTS } from "./products";
 import type { DailyRecord, MovementRow, OrderRecommendation, QuantityMap } from "./types";
 
 export function n(v: unknown): number {
@@ -334,7 +334,7 @@ export function recommend(
 }
 
 export function totals(record: DailyRecord | null): Record<string, number> {
-  const t = { Sandwiches: 0, Cakes: 0, Croissants: 0 };
+  const t: Record<string, number> = Object.fromEntries(CATEGORIES.map(category => [category, 0]));
   if (!record) return t;
   for (const p of PRODUCTS) t[p.category] += finalStock(record, p.id);
   return t;
