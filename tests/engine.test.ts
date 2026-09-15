@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   forecastForDate,
+  weeklyVelocity,
   movementHistory,
   recommend,
   recommendedOrderDate
@@ -30,6 +31,14 @@ describe("movement and forecast engine", () => {
       recs[0].forecastBreakdown.reduce((sum, x) => sum + x.value, 0)
     );
     expect(recommendedOrderDate(seedRecords(), "weekend")).toBe("2026-09-17");
+  });
+
+  it("builds a seven-day order forecast and exposes weekly movement speed", () => {
+    const records = seedRecords();
+    const recs = recommend(records, "weekly");
+    expect(recs[0].forecastBreakdown).toHaveLength(7);
+    expect(recs.every(r => r.recommended >= 0)).toBe(true);
+    expect(weeklyVelocity(records, "fajita").weeklyMovement).toBe(70);
   });
 
   it("manager-order output retains confidence and explanation", () => {
