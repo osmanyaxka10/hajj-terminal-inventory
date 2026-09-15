@@ -10,8 +10,8 @@ import {
 import { seedRecords } from "../lib/seed";
 
 describe("movement and forecast engine", () => {
-  it("calculates confirmed Fajita movement", () => {
-    expect(movementHistory(seedRecords(), "fajita")).toEqual([26, 44]);
+  it("calculates confirmed Ranch movement", () => {
+    expect(movementHistory(seedRecords(), "ranch")).toEqual([6, 9]);
   });
 
   it("does not treat an unexplained 3 Cheese stock increase as negative sales", () => {
@@ -19,7 +19,7 @@ describe("movement and forecast engine", () => {
   });
 
   it("produces a nonnegative weekday forecast", () => {
-    const f = forecastForDate(seedRecords(), "fajita", "2026-09-14");
+    const f = forecastForDate(seedRecords(), "ranch", "2026-09-14");
     expect(f.value).toBeGreaterThanOrEqual(0);
   });
 
@@ -39,7 +39,7 @@ describe("movement and forecast engine", () => {
     const recs = recommend(records, "weekly");
     expect(recs[0].forecastBreakdown).toHaveLength(7);
     expect(recs.every(r => r.recommended >= 0)).toBe(true);
-    expect(weeklyVelocity(records, "fajita").weeklyMovement).toBe(70);
+    expect(weeklyVelocity(records, "ranch").weeklyMovement).toBe(15);
   });
 
   it("builds weekly and monthly report series", () => {
@@ -48,7 +48,7 @@ describe("movement and forecast engine", () => {
   });
 
   it("manager-order output retains confidence and explanation", () => {
-    const f = recommend(seedRecords(), "tomorrow").find(x => x.productId === "fajita");
+    const f = recommend(seedRecords(), "tomorrow").find(x => x.productId === "ranch");
     expect(f?.confidence).toBeTruthy();
     expect(f?.explanation).toContain("Current");
   });
