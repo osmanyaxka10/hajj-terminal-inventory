@@ -3,6 +3,7 @@ import {
   forecastForDate,
   weeklyVelocity,
   movementHistory,
+  movementReport,
   recommend,
   recommendedOrderDate
 } from "../lib/engine";
@@ -39,6 +40,11 @@ describe("movement and forecast engine", () => {
     expect(recs[0].forecastBreakdown).toHaveLength(7);
     expect(recs.every(r => r.recommended >= 0)).toBe(true);
     expect(weeklyVelocity(records, "fajita").weeklyMovement).toBe(70);
+  });
+
+  it("builds weekly and monthly report series", () => {
+    expect(movementReport(seedRecords(),7).daily).toHaveLength(7);
+    expect(movementReport(seedRecords(),30).daily).toHaveLength(30);
   });
 
   it("manager-order output retains confidence and explanation", () => {
