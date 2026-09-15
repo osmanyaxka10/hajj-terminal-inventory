@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { PRODUCTS } from "@/lib/products";
+import { CATEGORIES, PRODUCTS } from "@/lib/products";
 import {
   emptyMap,
   finalStock,
@@ -366,7 +366,9 @@ export default function InventoryApp() {
     setStatus("Signed out • local fallback");
   }
 
-  const totalAll = sum.Sandwiches + sum.Cakes + sum.Croissants;
+  const totalAll = latest
+    ? PRODUCTS.reduce((total, product) => total + finalStock(latest, product.id), 0)
+    : 0;
   const orderTotal = Object.values(approved).reduce((s, x) => s + Math.max(0, Number(x || 0)), 0);
 
   return (
@@ -459,7 +461,7 @@ export default function InventoryApp() {
               <strong>Each row:</strong> physical count → immediate receiving/top-up.
             </div>
 
-            {(["Sandwiches", "Cakes", "Croissants"] as const).map(cat => (
+            {CATEGORIES.map(cat => (
               <div className="category" key={cat}>
                 <h3>{cat}</h3>
                 <div className="grid2">
@@ -552,7 +554,7 @@ export default function InventoryApp() {
                 : "Enter the quantity for each affected item. Leave other items at 0."}
             </div>
 
-            {(["Sandwiches", "Cakes", "Croissants"] as const).map(cat => (
+            {CATEGORIES.map(cat => (
               <div className="category" key={cat}>
                 <h3>{cat}</h3>
                 <div className="grid2">
