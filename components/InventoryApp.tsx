@@ -6,6 +6,7 @@ import {
   emptyMap,
   finalStock,
   movementRows,
+  movementReport,
   recommend,
   recommendedOrderDate,
   sorted,
@@ -40,7 +41,7 @@ import { openGoogleCalendarDraft } from "@/lib/calendar";
 import { downloadFullBackup } from "@/lib/backup";
 import { askInventoryAI } from "@/lib/ai";
 
-type Tab = "count" | "operations" | "movement" | "orders" | "intelligence" | "assistant" | "quick" | "history";
+type Tab = "count" | "operations" | "movement" | "reports" | "orders" | "intelligence" | "assistant" | "quick" | "history";
 
 function nowDate() {
   const d = new Date();
@@ -66,6 +67,7 @@ export default function InventoryApp() {
   const [forecastRows, setForecastRows] = useState<ForecastAccuracyRow[]>([]);
   const [forecastSummary, setForecastSummary] = useState<ForecastSummary>({overallAccuracy:null,bestProduct:null,worstProduct:null,mostUnderForecast:null,mostOverForecast:null,reconciledRows:0});
   const [tab, setTab] = useState<Tab>("count");
+  const [reportDays, setReportDays] = useState<7 | 30>(7);
 
   const [date, setDate] = useState(nowDate());
   const [time, setTime] = useState(nowTime());
@@ -157,6 +159,7 @@ export default function InventoryApp() {
   const ordered = useMemo(() => sorted(records), [records]);
   const latest = ordered.at(-1) ?? null;
   const movement = useMemo(() => movementRows(records), [records]);
+  const report = useMemo(() => movementReport(records, reportDays), [records, reportDays]);
   const recs = useMemo(() => recommend(records, mode), [records, mode]);
   const orderFor = useMemo(() => recommendedOrderDate(records, mode), [records, mode]);
   const sum = totals(latest);
@@ -409,7 +412,7 @@ export default function InventoryApp() {
 
         <nav className="tabs">
           {(
-            ["count", "operations", "movement", "orders", "intelligence", "assistant", "quick", "history"] as Tab[]
+            ["count", "operations", "movement", "reports", "orders", "intelligence", "assistant", "quick", "history"] as Tab[]
           ).map(x => (
             <button
               key={x}
@@ -642,6 +645,41 @@ export default function InventoryApp() {
                 </tbody>
               </table>
             </div>
+          </section>
+        )}
+
+        {tab === "reports" && (
+          <section className="card">
+            <div className="section-head">
+              <div><h2>Movement reports</h2><p className="muted">Confirmed movement from physical counts. Quantity scale starts at zero.</p></div>
+              <div className="actions" style={{marginTop:0}}>
+                <button className={`btn ${reportDays===7?"primary":""}`} onClick={()=>setReportDays(7)}>Weekly</button>
+                <button className={`btn ${reportDays===30?"primary":""}`} onClick={()=>setReportDays(30)}>Monthly</button>
+              </div>
+            </div>
+            {(() => {
+              const max=Math.max(1,...report.daily.map(d=>d.movement));
+              const total=report.daily.reduce((s,d)=>s+d.movement,0);
+              const points=report.daily.map((d,i)=>`${52+(i*620)/Math.max(1,report.daily.length-1)},${220-(d.movement/max)*180}`).join(" ");
+              return <>
+                <div className="report-summary">
+                  <div><span>Total movement</span><strong>{total}</strong></div>
+                  <div><span>Daily average</span><strong>{(total/reportDays).toFixed(1)}</strong></div>
+                  <div><span>Highest day</span><strong>{Math.max(0,...report.daily.map(d=>d.movement))}</strong></div>
+                </div>
+                <div className="movement-chart" role="img" aria-label={`${reportDays}-day movement chart from zero to ${Math.ceil(max)}`}>
+                  <svg viewBox="0 0 700 260" preserveAspectRatio="none">
+                    {[40,130,220].map((y,i)=><g key={y}><line x1="52" y1={y} x2="672" y2={y} className="chart-grid"/><text x="45" y={y+4} textAnchor="end">{Math.round(max*(1-i/2))}</text></g>)}
+                    <polyline points={points} className="chart-line"/>
+                    {report.daily.map((d,i)=>{const x=52+(i*620)/Math.max(1,report.daily.length-1);const y=220-(d.movement/max)*180;const label=reportDays===7||i%5===0||i===report.daily.length-1;return <g key={d.date}><circle cx={x} cy={y} r="4" className="chart-dot"><title>{d.date}: {d.movement} pcs</title></circle>{label&&<text x={x} y="244" textAnchor="middle">{d.date.slice(5)}</text>}</g>})}
+                  </svg>
+                </div>
+              </>;
+            })()}
+            <h3>Products by movement</h3>
+            <div className="table-wrap"><table className="tbl"><thead><tr><th>Product</th><th>{reportDays}-day movement</th><th>Share</th></tr></thead><tbody>
+              {report.products.map(row=>{const total=report.products.reduce((s,x)=>s+x.movement,0);return <tr key={row.productId}><td>{productName(row.productId)}</td><td><strong>{row.movement}</strong></td><td>{total?`${((row.movement/total)*100).toFixed(1)}%`:"0%"}</td></tr>})}
+            </tbody></table></div>
           </section>
         )}
 
