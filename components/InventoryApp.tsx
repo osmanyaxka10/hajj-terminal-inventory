@@ -42,8 +42,9 @@ import { exportCurrentInventoryCsv, exportDailyMovementCsv, exportOrderCsv, down
 import { openGoogleCalendarDraft } from "@/lib/calendar";
 import { downloadFullBackup } from "@/lib/backup";
 import { askInventoryAI } from "@/lib/ai";
+import { parseOracleRows, type OracleImportRow } from "@/lib/oracle";
 
-type Tab = "dashboard" | "count" | "expiry" | "operations" | "sales" | "movement" | "reports" | "orders" | "intelligence" | "assistant" | "quick" | "history";
+type Tab = "dashboard" | "count" | "expiry" | "operations" | "oracle" | "sales" | "movement" | "reports" | "orders" | "intelligence" | "assistant" | "quick" | "history";
 
 function nowDate() {
   const d = new Date();
@@ -97,12 +98,19 @@ export default function InventoryApp() {
   const [aiQuestion,setAiQuestion]=useState("");
   const [aiAnswer,setAiAnswer]=useState("");
   const [aiBusy,setAiBusy]=useState(false);
+  const [oracleRows,setOracleRows]=useState<OracleImportRow[]>([]);
+  const [oracleFile,setOracleFile]=useState("");
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(true);
   const [status, setStatus] = useState("Checking cloud connection…");
 
   useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("hajj-oracle-readonly-v1") || "[]");
+      if (Array.isArray(saved)) setOracleRows(saved);
+      setOracleFile(localStorage.getItem("hajj-oracle-readonly-file-v1") || "");
+    } catch {}
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
@@ -113,6 +121,18 @@ export default function InventoryApp() {
     bootstrap();
     return () => sub.data.subscription.unsubscribe();
   }, []);
+
+  async function importOracleFile(file: File) {
+    const XLSX = await import("xlsx");
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const source = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+    const parsed = parseOracleRows(source);
+    setOracleRows(parsed);
+    setOracleFile(file.name);
+    localStorage.setItem("hajj-oracle-readonly-v1", JSON.stringify(parsed));
+    localStorage.setItem("hajj-oracle-readonly-file-v1", file.name);
+  }
 
   async function bootstrap() {
     const user = await getAuthUser();
@@ -188,6 +208,10 @@ export default function InventoryApp() {
     .slice(0, 5);
   const maxTopSale = Math.max(1, ...topSales.map(row => row.sold || 0));
   const maxCategoryStock = Math.max(1, sum.Sandwiches, sum.Cakes, sum.Croissants);
+  const oracleMapped = oracleRows.filter(row => row.productId);
+  const oracleUnmapped = oracleRows.filter(row => !row.productId);
+  const oracleExpected = oracleRows.reduce((total, row) => total + row.expected, 0);
+  const oracleReceived = oracleRows.reduce((total, row) => total + row.received, 0);
 
   useEffect(() => {
     setApproved(Object.fromEntries(recs.map(r => [r.productId, r.recommended])));
@@ -430,7 +454,7 @@ export default function InventoryApp() {
 
         <nav className="tabs">
           {(
-            ["dashboard", "count", "expiry", "operations", "sales", "movement", "reports", "orders", "intelligence", "assistant", "quick", "history"] as Tab[]
+            ["dashboard", "count", "expiry", "operations", "oracle", "sales", "movement", "reports", "orders", "intelligence", "assistant", "quick", "history"] as Tab[]
           ).map(x => (
             <button
               key={x}
@@ -489,6 +513,7 @@ export default function InventoryApp() {
               <button onClick={() => setTab("count")}><span>＋</span><strong>New count</strong><small>Night-shift stock</small></button>
               <button onClick={() => { setOpType("receiving"); setTab("operations"); }}><span>⇩</span><strong>Receive</strong><small>Bakery delivery</small></button>
               <button onClick={() => setTab("sales")}><span>▥</span><strong>Daily sales</strong><small>Read-only report</small></button>
+              <button onClick={() => setTab("oracle")}><span>◫</span><strong>Oracle</strong><small>Import and compare</small></button>
               <button onClick={() => setTab("assistant")}><span>✦</span><strong>Assistant</strong><small>Stock questions</small></button>
             </div>
           </div>
@@ -688,6 +713,52 @@ export default function InventoryApp() {
               </button>
               <button className="btn" onClick={() => setOpQty(emptyMap())}>Clear quantities</button>
             </div>
+          </section>
+        )}
+
+        {tab === "oracle" && (
+          <section className="card">
+            <div className="section-head">
+              <div>
+                <h2>Oracle read-only import</h2>
+                <p className="muted">Upload an Oracle CSV or Excel export. This screen cannot write to Oracle or approve transactions.</p>
+              </div>
+              <span className="badge ok">Read only</span>
+            </div>
+            <label className="oracle-upload">
+              <strong>Choose Oracle export</strong>
+              <span>CSV, XLSX or XLS • first worksheet</span>
+              <input type="file" accept=".csv,.xlsx,.xls" onChange={async event => {
+                const file = event.target.files?.[0];
+                if (!file) return;
+                try { await importOracleFile(file); }
+                catch (error) { console.error(error); alert("Could not read this Oracle export. Use CSV or Excel with column headings."); }
+                event.target.value = "";
+              }} />
+            </label>
+            {oracleFile && <div className="notice good">Loaded locally on this phone: <strong>{oracleFile}</strong></div>}
+            <div className="report-summary oracle-summary">
+              <div><span>Oracle lines</span><strong>{oracleRows.length}</strong></div>
+              <div><span>Expected</span><strong>{oracleExpected}</strong></div>
+              <div><span>Received</span><strong>{oracleReceived}</strong></div>
+              <div><span>Not matched</span><strong>{oracleUnmapped.length}</strong></div>
+            </div>
+            {!oracleRows.length ? <div className="notice">Export receiving or transfer-order lines from Oracle, then upload the file here.</div> : <>
+              <div className="table-wrap"><table className="tbl oracle-table"><thead><tr><th>Oracle item</th><th>Transfer order</th><th>Expected</th><th>Received</th><th>Difference</th><th>UoM</th><th>Hajj available</th><th>Status</th></tr></thead><tbody>
+                {oracleRows.map((row,index) => {
+                  const difference = row.received - row.expected;
+                  const available = row.productId && latest ? finalStock(latest,row.productId) : null;
+                  return <tr key={`${row.itemNumber}-${index}`}>
+                    <td><strong>{row.itemName || row.itemNumber}</strong>{row.itemNumber && <small className="table-sub">{row.itemNumber}</small>}</td>
+                    <td>{row.transferOrder || "—"}</td><td>{row.expected}</td><td>{row.received}</td>
+                    <td className={difference < 0 ? "value-bad" : difference > 0 ? "value-warn" : "value-good"}>{difference > 0 ? `+${difference}` : difference}</td>
+                    <td>{row.uom || "—"}</td><td>{available ?? "Not matched"}</td><td>{row.status || (difference === 0 ? "Complete" : "Check")}</td>
+                  </tr>;
+                })}
+              </tbody></table></div>
+              {oracleUnmapped.length > 0 && <div className="notice warn"><strong>{oracleUnmapped.length} Oracle item(s) not matched.</strong> Use the exact bakery MC item names so they can be compared with Hajj Terminal stock.</div>}
+              <div className="actions"><button className="btn" onClick={() => { setOracleRows([]); setOracleFile(""); localStorage.removeItem("hajj-oracle-readonly-v1"); localStorage.removeItem("hajj-oracle-readonly-file-v1"); }}>Clear local import</button></div>
+            </>}
           </section>
         )}
 
