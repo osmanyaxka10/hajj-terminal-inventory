@@ -4,6 +4,7 @@ import {
   weeklyVelocity,
   movementHistory,
   movementReport,
+  dailySalesReport,
   recommend,
   recommendedOrderDate
 } from "../lib/engine";
@@ -45,6 +46,20 @@ describe("movement and forecast engine", () => {
   it("builds weekly and monthly report series", () => {
     expect(movementReport(seedRecords(),7).daily).toHaveLength(7);
     expect(movementReport(seedRecords(),30).daily).toHaveLength(30);
+  });
+
+  it("builds a read-only itemized sales report for a completed day", () => {
+    const report = dailySalesReport(seedRecords(), "2026-09-11");
+    expect(report.complete).toBe(true);
+    expect(report.nextCountDate).toBe("2026-09-12");
+    expect(report.rows.find(row => row.productId === "ranch")?.sold).toBe(6);
+    expect(report.total).toBeGreaterThan(0);
+  });
+
+  it("waits for the next count before confirming daily sales", () => {
+    const report = dailySalesReport(seedRecords(), "2026-09-13");
+    expect(report.complete).toBe(false);
+    expect(report.rows.every(row => row.sold === null)).toBe(true);
   });
 
   it("manager-order output retains confidence and explanation", () => {
