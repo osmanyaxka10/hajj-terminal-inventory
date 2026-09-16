@@ -5,6 +5,7 @@ import {
   movementHistory,
   movementReport,
   dailySalesReport,
+  hasCountForDate,
   recommend,
   recommendedOrderDate
 } from "../lib/engine";
@@ -60,6 +61,12 @@ describe("movement and forecast engine", () => {
     const report = dailySalesReport(seedRecords(), "2026-09-13");
     expect(report.complete).toBe(false);
     expect(report.rows.every(row => row.sold === null)).toBe(true);
+  });
+
+  it("blocks an accidental second count for the same business date", () => {
+    const records=seedRecords();
+    expect(hasCountForDate(records,"2026-09-13")).toBe(true);
+    expect(hasCountForDate(records,"2026-09-14")).toBe(false);
   });
 
   it("manager-order output retains confidence and explanation", () => {
