@@ -310,7 +310,7 @@ export default function InventoryApp() {
     }
     setSyncing(true);
     try {
-      await saveCloudOperation({
+      const result = await saveCloudOperation({
         type: opType,
         date: opDate,
         time: opTime,
@@ -322,7 +322,7 @@ export default function InventoryApp() {
       setOpLabel("");
       setOpReason("");
       await refreshCloud();
-      alert(`${operationLabel(opType)} saved.`);
+      alert(result?.batchWarning?`${operationLabel(opType)} saved. Expiry batch needs checking: ${result.batchWarning}`:`${operationLabel(opType)} saved${opType==="receiving"?" with automatic expiry batches":""}.`);
     } catch (e: any) {
       alert(e?.message || "Operation save failed");
       setSyncing(false);
@@ -723,6 +723,7 @@ export default function InventoryApp() {
                   <div className="sales-total"><span>Total sold</span><strong>{periodSales.total}</strong></div>
                 </div>
                 <div className="notice good"><strong>{salesPeriod[0].toUpperCase()+salesPeriod.slice(1)} report:</strong> {periodSales.startDate} to {periodSales.endDate} · {periodSales.days.length} confirmed day{periodSales.days.length===1?"":"s"}.</div>
+                {periodSales.missingDates.length>0&&<div className="notice warn"><strong>Incomplete {salesPeriod} report.</strong> Missing {periodSales.missingDates.length} of {periodSales.expectedDays} day{periodSales.expectedDays===1?"":"s"}: {periodSales.missingDates.join(", ")}. Totals include confirmed days only.</div>}
                 {salesPeriod!=="daily"&&<div className="sales-trend"><h3>Sales by day</h3>{periodSales.days.map(day=><div className="sales-trend-row" key={day.date}><span>{day.date}</span><div><i style={{width:`${periodSales.total?Math.max(3,(day.total/Math.max(...periodSales.days.map(d=>d.total)))*100):0}%`}} /></div><strong>{day.total}</strong></div>)}</div>}
                 {CATEGORIES.map(category => (
                   <div className="sales-category" key={category}>
