@@ -510,7 +510,7 @@ export default function InventoryApp() {
           <div className="dashboard-panel">
             <div className="panel-heading"><div><h3>Quick actions</h3><p>Designed for phone operation</p></div></div>
             <div className="dashboard-actions">
-              <button onClick={() => setTab("count")}><span>＋</span><strong>New count</strong><small>Night-shift stock</small></button>
+              <button onClick={() => { window.location.href="/count"; }}><span>＋</span><strong>Night-shift count</strong><small>Simple employee screen</small></button>
               <button onClick={() => { setOpType("receiving"); setTab("operations"); }}><span>⇩</span><strong>Receive</strong><small>Bakery delivery</small></button>
               <button onClick={() => setTab("sales")}><span>▥</span><strong>Daily sales</strong><small>Read-only report</small></button>
               <button onClick={() => setTab("oracle")}><span>◫</span><strong>Oracle</strong><small>Import and compare</small></button>
