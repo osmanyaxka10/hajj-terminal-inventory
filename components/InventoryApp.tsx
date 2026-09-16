@@ -43,7 +43,7 @@ import { openGoogleCalendarDraft } from "@/lib/calendar";
 import { downloadFullBackup } from "@/lib/backup";
 import { askInventoryAI } from "@/lib/ai";
 
-type Tab = "count" | "expiry" | "operations" | "sales" | "movement" | "reports" | "orders" | "intelligence" | "assistant" | "quick" | "history";
+type Tab = "dashboard" | "count" | "expiry" | "operations" | "sales" | "movement" | "reports" | "orders" | "intelligence" | "assistant" | "quick" | "history";
 
 function nowDate() {
   const d = new Date();
@@ -74,7 +74,7 @@ export default function InventoryApp() {
   const [orders, setOrders] = useState<CloudOrder[]>([]);
   const [forecastRows, setForecastRows] = useState<ForecastAccuracyRow[]>([]);
   const [forecastSummary, setForecastSummary] = useState<ForecastSummary>({overallAccuracy:null,bestProduct:null,worstProduct:null,mostUnderForecast:null,mostOverForecast:null,reconciledRows:0});
-  const [tab, setTab] = useState<Tab>("count");
+  const [tab, setTab] = useState<Tab>("dashboard");
   const [reportDays, setReportDays] = useState<7 | 30>(7);
   const [salesDate, setSalesDate] = useState("");
 
@@ -171,9 +171,23 @@ export default function InventoryApp() {
   const salesDates = useMemo(() => ordered.slice(0, -1).map(record => record.date), [ordered]);
   const selectedSalesDate = salesDate || salesDates.at(-1) || "";
   const sales = useMemo(() => dailySalesReport(records, selectedSalesDate), [records, selectedSalesDate]);
+  const dashboardSalesDate = salesDates.at(-1) || "";
+  const dashboardSales = useMemo(() => dailySalesReport(records, dashboardSalesDate), [records, dashboardSalesDate]);
   const recs = useMemo(() => recommend(records, mode), [records, mode]);
   const orderFor = useMemo(() => recommendedOrderDate(records, mode), [records, mode]);
   const sum = totals(latest);
+  const stockRows = PRODUCTS.map(product => {
+    const quantity = latest ? finalStock(latest, product.id) : 0;
+    return { product, quantity, status: stockStatus(quantity, product.safetyStock) };
+  });
+  const outItems = stockRows.filter(row => row.quantity <= 0);
+  const lowItems = stockRows.filter(row => row.quantity > 0 && row.quantity <= row.product.safetyStock);
+  const topSales = dashboardSales.rows
+    .filter(row => row.sold !== null && !row.discrepancy)
+    .sort((a, b) => (b.sold || 0) - (a.sold || 0))
+    .slice(0, 5);
+  const maxTopSale = Math.max(1, ...topSales.map(row => row.sold || 0));
+  const maxCategoryStock = Math.max(1, sum.Sandwiches, sum.Cakes, sum.Croissants);
 
   useEffect(() => {
     setApproved(Object.fromEntries(recs.map(r => [r.productId, r.recommended])));
@@ -414,11 +428,70 @@ export default function InventoryApp() {
           )}
         </div>
 
-        <section className="metrics">
-          <div className="metric"><span>Sandwiches</span><strong>{sum.Sandwiches}</strong></div>
-          <div className="metric"><span>Cakes</span><strong>{sum.Cakes}</strong></div>
-          <div className="metric"><span>Croissants</span><strong>{sum.Croissants}</strong></div>
-          <div className="metric accent"><span>Grand total</span><strong>{totalAll}</strong></div>
+        <nav className="tabs">
+          {(
+            ["dashboard", "count", "expiry", "operations", "sales", "movement", "reports", "orders", "intelligence", "assistant", "quick", "history"] as Tab[]
+          ).map(x => (
+            <button
+              key={x}
+              className={tab === x ? "active" : ""}
+              onClick={() => setTab(x)}
+            >
+              {x === "quick" ? "Quick Entry" : x[0].toUpperCase() + x.slice(1)}
+            </button>
+          ))}
+        </nav>
+
+        {tab === "dashboard" && <>
+        <section className="dashboard-title">
+          <div><span className="dashboard-kicker">Operations overview</span><h2>Hajj Terminal dashboard</h2><p>Live stock, confirmed sales and exceptions in one place.</p></div>
+          <button className="btn" onClick={refreshCloud}>↻ Refresh</button>
+        </section>
+
+        <section className="dashboard-kpis">
+          <div className="dashboard-kpi"><span>Available stock</span><strong>{totalAll}</strong><small>Latest: {latest?.date || "No count"}</small></div>
+          <div className="dashboard-kpi sales"><span>Confirmed daily sales</span><strong>{dashboardSales.complete ? dashboardSales.total : "—"}</strong><small>{dashboardSales.complete ? dashboardSales.date : "Waiting for next count"}</small></div>
+          <div className="dashboard-kpi low"><span>Low-stock items</span><strong>{lowItems.length}</strong><small>At or below safety level</small></div>
+          <div className="dashboard-kpi out"><span>Out-of-stock items</span><strong>{outItems.length}</strong><small>Needs attention</small></div>
+        </section>
+
+        <section className="dashboard-grid">
+          <div className="dashboard-panel">
+            <div className="panel-heading"><div><h3>Stock by category</h3><p>Current pieces available</p></div><span className="panel-tag">Live</span></div>
+            {CATEGORIES.map(category => {
+              const value = sum[category];
+              return <div className="dash-bar-row" key={category}>
+                <div><span>{category}</span><strong>{value}</strong></div>
+                <div className="dash-bar-track"><span style={{width:`${(value/maxCategoryStock)*100}%`}} /></div>
+              </div>;
+            })}
+          </div>
+
+          <div className="dashboard-panel">
+            <div className="panel-heading"><div><h3>Top daily sales</h3><p>{dashboardSales.complete ? dashboardSales.date : "Waiting for next physical count"}</p></div><button className="link-button" onClick={() => setTab("sales")}>View all</button></div>
+            {topSales.length ? topSales.map(row => <div className="dash-bar-row sales-bars" key={row.productId}>
+              <div><span>{productName(row.productId)}</span><strong>{row.sold}</strong></div>
+              <div className="dash-bar-track"><span style={{width:`${((row.sold || 0)/maxTopSale)*100}%`}} /></div>
+            </div>) : <div className="dashboard-empty">Save the next count to confirm daily sales.</div>}
+          </div>
+
+          <div className="dashboard-panel">
+            <div className="panel-heading"><div><h3>Stock alerts</h3><p>Low and unavailable products</p></div><span className={`panel-tag ${outItems.length ? "danger" : ""}`}>{lowItems.length + outItems.length}</span></div>
+            {[...outItems, ...lowItems].length ? [...outItems, ...lowItems].map(row => <div className="alert-row" key={row.product.id}>
+              <span className={`stock-dot ${row.status.className}`} />
+              <span>{row.product.name}</span><strong>{row.quantity}</strong><small>{row.status.label}</small>
+            </div>) : <div className="dashboard-empty">All products are above their safety levels.</div>}
+          </div>
+
+          <div className="dashboard-panel">
+            <div className="panel-heading"><div><h3>Quick actions</h3><p>Designed for phone operation</p></div></div>
+            <div className="dashboard-actions">
+              <button onClick={() => setTab("count")}><span>＋</span><strong>New count</strong><small>Night-shift stock</small></button>
+              <button onClick={() => { setOpType("receiving"); setTab("operations"); }}><span>⇩</span><strong>Receive</strong><small>Bakery delivery</small></button>
+              <button onClick={() => setTab("sales")}><span>▥</span><strong>Daily sales</strong><small>Read-only report</small></button>
+              <button onClick={() => setTab("assistant")}><span>✦</span><strong>Assistant</strong><small>Stock questions</small></button>
+            </div>
+          </div>
         </section>
 
         <section className="card available-board">
@@ -454,20 +527,7 @@ export default function InventoryApp() {
           <button className="phone-action" onClick={() => setTab("sales")}><strong>Daily sales</strong><span>Read-only report</span></button>
           <button className="phone-action" onClick={() => setTab("assistant")}><strong>Ask assistant</strong><span>Stock and order help</span></button>
         </section>
-
-        <nav className="tabs">
-          {(
-            ["count", "expiry", "operations", "sales", "movement", "reports", "orders", "intelligence", "assistant", "quick", "history"] as Tab[]
-          ).map(x => (
-            <button
-              key={x}
-              className={tab === x ? "active" : ""}
-              onClick={() => setTab(x)}
-            >
-              {x === "quick" ? "Quick Entry" : x[0].toUpperCase() + x.slice(1)}
-            </button>
-          ))}
-        </nav>
+        </>}
 
         {tab === "count" && (
           <section className="card">
