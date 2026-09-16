@@ -149,6 +149,29 @@ export function dailySalesReport(records: DailyRecord[], date: string) {
   };
 }
 
+export type SalesPeriod = "daily" | "weekly" | "monthly";
+
+export function salesPeriodReport(records: DailyRecord[], period: SalesPeriod, anchorDate: string) {
+  if (!anchorDate) return { period, startDate:"", endDate:"", days:[], rows:[], categoryTotals:Object.fromEntries(CATEGORIES.map(c=>[c,0])) as Record<(typeof CATEGORIES)[number],number>, total:0 };
+  const startDate = period === "daily"
+    ? anchorDate
+    : period === "weekly"
+      ? addDays(anchorDate,-6)
+      : `${anchorDate.slice(0,7)}-01`;
+  const completeDates = sorted(records).slice(0,-1).map(record=>record.date).filter(date=>date>=startDate&&date<=anchorDate);
+  const days = completeDates.map(date=>dailySalesReport(records,date)).filter(report=>report.complete);
+  const rows = PRODUCTS.map(product=>({
+    productId:product.id,
+    category:product.category,
+    sold:days.reduce((sum,day)=>sum+(day.rows.find(row=>row.productId===product.id)?.sold??0),0),
+    discrepancyDays:days.filter(day=>day.rows.find(row=>row.productId===product.id)?.discrepancy).length
+  }));
+  const categoryTotals = Object.fromEntries(CATEGORIES.map(category=>[
+    category,rows.filter(row=>row.category===category).reduce((sum,row)=>sum+row.sold,0)
+  ])) as Record<(typeof CATEGORIES)[number],number>;
+  return {period,startDate,endDate:anchorDate,days,rows,categoryTotals,total:Object.values(categoryTotals).reduce((sum,value)=>sum+value,0)};
+}
+
 export function avg(values: number[], days: number): number {
   const v = values.slice(-days);
   return v.length ? v.reduce((s, x) => s + x, 0) / v.length : 0;
