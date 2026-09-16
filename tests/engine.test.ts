@@ -5,6 +5,7 @@ import {
   movementHistory,
   movementReport,
   dailySalesReport,
+  salesPeriodReport,
   hasCountForDate,
   recommend,
   recommendedOrderDate
@@ -61,6 +62,12 @@ describe("movement and forecast engine", () => {
     const report = dailySalesReport(seedRecords(), "2026-09-13");
     expect(report.complete).toBe(false);
     expect(report.rows.every(row => row.sold === null)).toBe(true);
+  });
+
+  it("aggregates read-only weekly sales from completed days", () => {
+    const report = salesPeriodReport(seedRecords(), "weekly", "2026-09-12");
+    expect(report.days.length).toBeGreaterThan(0);
+    expect(report.total).toBe(report.categoryTotals.Sandwiches+report.categoryTotals.Cakes+report.categoryTotals.Croissants);
   });
 
   it("blocks an accidental second count for the same business date", () => {
