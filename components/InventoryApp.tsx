@@ -443,6 +443,12 @@ export default function InventoryApp() {
           )) : <div className="notice">No stock saved yet. Enter tonight&apos;s count below.</div>}
         </section>
 
+        <section className="phone-actions" aria-label="Phone actions">
+          <button className="phone-action" onClick={() => setTab("count")}><strong>New count</strong><span>Enter available stock</span></button>
+          <button className="phone-action" onClick={() => { setOpType("receiving"); setTab("operations"); }}><strong>Receive</strong><span>From Bakery Warehouse</span></button>
+          <button className="phone-action" onClick={() => setTab("assistant")}><strong>Ask assistant</strong><span>Stock and order help</span></button>
+        </section>
+
         <nav className="tabs">
           {(
             ["count", "expiry", "operations", "movement", "reports", "orders", "intelligence", "assistant", "quick", "history"] as Tab[]
@@ -936,9 +942,9 @@ export default function InventoryApp() {
           <section className="card">
             <div className="section-head">
               <div>
-                <h2>Inventory AI Assistant</h2>
+                <h2>Hajj Stock Assistant</h2>
                 <p className="muted">
-                  Read-only AI. It receives only the current inventory analysis shown by this app.
+                  Built-in read-only assistant. It receives only the current inventory analysis shown by this app.
                   It cannot silently receive stock, transfer items, approve orders or edit the database.
                 </p>
               </div>
@@ -982,13 +988,13 @@ export default function InventoryApp() {
                   }
                 }}
               >
-                {aiBusy ? "Thinking…" : "Ask Inventory AI"}
+                {aiBusy ? "Checking stock…" : "Ask Stock Assistant"}
               </button>
             </div>
 
             {aiAnswer && <div className="notice good" style={{whiteSpace:"pre-wrap"}}>{aiAnswer}</div>}
             <p className="muted">
-              AI requires an OpenAI API key on the server. The inventory app itself continues to work without AI.
+              Works without an API key or extra payment. It cannot change inventory records.
             </p>
           </section>
         )}
