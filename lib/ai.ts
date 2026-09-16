@@ -9,18 +9,24 @@ export async function askInventoryAI(input:{
   orderFor:string;
   recommendations:OrderRecommendation[];
 }) {
-  const products = input.movement.map(m=>({
-    name: PRODUCTS.find(p=>p.id===m.productId)?.name || m.productId,
-    current: m.currentPhysical,
-    movement: m.movement,
-    avg3: m.avg3,
-    avg7: m.avg7,
-    avg14: m.avg14,
-    daysRemaining: m.daysRemaining,
-    trend: m.trend,
-    discrepancy: m.discrepancy,
-    possibleStockout: m.potentialStockout
-  }));
+  const recommendationByProduct = new Map(input.recommendations.map(row => [row.productId, row]));
+  const products = input.movement.map(m=>{
+    const recommendation = recommendationByProduct.get(m.productId);
+    return {
+      name: PRODUCTS.find(p=>p.id===m.productId)?.name || m.productId,
+      current: recommendation?.current ?? 0,
+      movement: m.movement,
+      avg3: m.avg3,
+      avg7: m.avg7,
+      avg14: m.avg14,
+      daysRemaining: m.daysRemaining,
+      trend: m.trend,
+      velocity: recommendation?.velocity ?? "Insufficient",
+      recommended: recommendation?.recommended ?? 0,
+      discrepancy: m.discrepancy,
+      possibleStockout: m.potentialStockout
+    };
+  });
 
   const totalRecommended = input.recommendations.reduce((s,r)=>s+r.recommended,0);
 
