@@ -1,6 +1,6 @@
-const CACHE="hajj-terminal-v24";
+const CACHE="hajj-terminal-v25";
 self.addEventListener("install",event=>{
-  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(["/","/manifest.webmanifest","/icon.svg"])));
+  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(["/","/count","/manifest.webmanifest","/icon.svg"])));
   self.skipWaiting();
 });
 self.addEventListener("activate",event=>event.waitUntil(
