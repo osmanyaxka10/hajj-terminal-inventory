@@ -49,6 +49,26 @@ function toIsoLocal(date: string, time: string) {
   return new Date(`${date}T${time}:00`).toISOString();
 }
 
+function addCalendarDays(date:string,days:number){
+  const value=new Date(`${date}T12:00:00`);
+  value.setDate(value.getDate()+days);
+  return value.toISOString().slice(0,10);
+}
+
+async function createReceivingBatches(date:string,quantities:QuantityMap,source:string){
+  const rows=PRODUCTS.filter(product=>Number(quantities[product.id]||0)>0).map(product=>({
+    product_code:product.id,
+    quantity_received:Math.abs(Number(quantities[product.id]||0)),
+    quantity_remaining:Math.abs(Number(quantities[product.id]||0)),
+    received_date:date,
+    expiry_date:addCalendarDays(date,product.shelfLifeDays),
+    notes:source
+  }));
+  if(!rows.length) return null;
+  const {error}=await supabase.from("hajj_batches").insert(rows);
+  return error?.message||null;
+}
+
 export async function getAuthUser() {
   const { data, error } = await supabase.auth.getUser();
   if (error) return null;
@@ -224,6 +244,7 @@ export async function saveCloudDailyRecord(input: {
       .from("hajj_receiving_items")
       .insert(receivingRows.map(x => ({ ...x, receiving_id: recv.id })));
     if (recvItemError) throw recvItemError;
+    await createReceivingBatches(input.date,input.receiving,`Auto batch · Daily top-up · ${recv.id}`);
   }
 
   await supabase.from("hajj_audit_logs").insert({
@@ -257,6 +278,7 @@ export async function saveCloudOperation(input: {
 
   if (!nonZero.length) throw new Error("Enter at least one quantity.");
 
+  let batchWarning:string|null=null;
   if (input.type === "receiving") {
     const { data: parent, error } = await supabase
       .from("hajj_receivings")
@@ -280,6 +302,7 @@ export async function saveCloudOperation(input: {
       }))
     );
     if (itemError) throw itemError;
+    batchWarning=await createReceivingBatches(input.date,input.quantities,`Auto batch · Operations receiving · ${parent.id}`);
   }
 
   if (input.type === "waste") {
@@ -331,6 +354,7 @@ export async function saveCloudOperation(input: {
     },
     reason: input.reason || `${input.type} entry`
   });
+  return {batchWarning};
 }
 
 export async function saveApprovedOrder(input: {
