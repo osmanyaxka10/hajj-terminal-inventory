@@ -1,4 +1,4 @@
-const CACHE="hajj-terminal-v27";
+const CACHE="hajj-terminal-v28";
 self.addEventListener("install",event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(["/","/count","/manifest.webmanifest","/icon.svg"])));
   self.skipWaiting();
