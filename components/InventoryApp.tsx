@@ -8,6 +8,8 @@ import {
   finalStock,
   movementRows,
   movementReport,
+  salesPeriodReport,
+  type SalesPeriod,
   recommend,
   recommendedOrderDate,
   sorted,
@@ -42,9 +44,8 @@ import { exportCurrentInventoryCsv, exportDailyMovementCsv, exportOrderCsv, down
 import { openGoogleCalendarDraft } from "@/lib/calendar";
 import { downloadFullBackup } from "@/lib/backup";
 import { askInventoryAI } from "@/lib/ai";
-import { parseOracleRows, type OracleImportRow } from "@/lib/oracle";
 
-type Tab = "dashboard" | "count" | "expiry" | "operations" | "oracle" | "sales" | "movement" | "reports" | "orders" | "intelligence" | "assistant" | "quick" | "history";
+type Tab = "dashboard" | "count" | "expiry" | "operations" | "sales" | "movement" | "reports" | "orders" | "intelligence" | "assistant" | "quick" | "history";
 
 function nowDate() {
   const d = new Date();
@@ -78,6 +79,7 @@ export default function InventoryApp() {
   const [tab, setTab] = useState<Tab>("dashboard");
   const [reportDays, setReportDays] = useState<7 | 30>(7);
   const [salesDate, setSalesDate] = useState("");
+  const [salesPeriod,setSalesPeriod]=useState<SalesPeriod>("daily");
 
   const [date, setDate] = useState(nowDate());
   const [time, setTime] = useState(nowTime());
@@ -98,19 +100,12 @@ export default function InventoryApp() {
   const [aiQuestion,setAiQuestion]=useState("");
   const [aiAnswer,setAiAnswer]=useState("");
   const [aiBusy,setAiBusy]=useState(false);
-  const [oracleRows,setOracleRows]=useState<OracleImportRow[]>([]);
-  const [oracleFile,setOracleFile]=useState("");
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(true);
   const [status, setStatus] = useState("Checking cloud connection…");
 
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("hajj-oracle-readonly-v1") || "[]");
-      if (Array.isArray(saved)) setOracleRows(saved);
-      setOracleFile(localStorage.getItem("hajj-oracle-readonly-file-v1") || "");
-    } catch {}
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
@@ -121,18 +116,6 @@ export default function InventoryApp() {
     bootstrap();
     return () => sub.data.subscription.unsubscribe();
   }, []);
-
-  async function importOracleFile(file: File) {
-    const XLSX = await import("xlsx");
-    const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const source = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
-    const parsed = parseOracleRows(source);
-    setOracleRows(parsed);
-    setOracleFile(file.name);
-    localStorage.setItem("hajj-oracle-readonly-v1", JSON.stringify(parsed));
-    localStorage.setItem("hajj-oracle-readonly-file-v1", file.name);
-  }
 
   async function bootstrap() {
     const user = await getAuthUser();
@@ -191,6 +174,7 @@ export default function InventoryApp() {
   const salesDates = useMemo(() => ordered.slice(0, -1).map(record => record.date), [ordered]);
   const selectedSalesDate = salesDate || salesDates.at(-1) || "";
   const sales = useMemo(() => dailySalesReport(records, selectedSalesDate), [records, selectedSalesDate]);
+  const periodSales = useMemo(()=>salesPeriodReport(records,salesPeriod,selectedSalesDate),[records,salesPeriod,selectedSalesDate]);
   const dashboardSalesDate = salesDates.at(-1) || "";
   const dashboardSales = useMemo(() => dailySalesReport(records, dashboardSalesDate), [records, dashboardSalesDate]);
   const recs = useMemo(() => recommend(records, mode), [records, mode]);
@@ -208,10 +192,6 @@ export default function InventoryApp() {
     .slice(0, 5);
   const maxTopSale = Math.max(1, ...topSales.map(row => row.sold || 0));
   const maxCategoryStock = Math.max(1, sum.Sandwiches, sum.Cakes, sum.Croissants);
-  const oracleMapped = oracleRows.filter(row => row.productId);
-  const oracleUnmapped = oracleRows.filter(row => !row.productId);
-  const oracleExpected = oracleRows.reduce((total, row) => total + row.expected, 0);
-  const oracleReceived = oracleRows.reduce((total, row) => total + row.received, 0);
 
   useEffect(() => {
     setApproved(Object.fromEntries(recs.map(r => [r.productId, r.recommended])));
@@ -454,7 +434,7 @@ export default function InventoryApp() {
 
         <nav className="tabs">
           {(
-            ["dashboard", "count", "expiry", "operations", "oracle", "sales", "movement", "reports", "orders", "intelligence", "assistant", "quick", "history"] as Tab[]
+            ["dashboard", "count", "expiry", "operations", "sales", "movement", "reports", "orders", "intelligence", "assistant", "quick", "history"] as Tab[]
           ).map(x => (
             <button
               key={x}
@@ -512,8 +492,7 @@ export default function InventoryApp() {
             <div className="dashboard-actions">
               <button onClick={() => { window.location.href="/count"; }}><span>＋</span><strong>Night-shift count</strong><small>Simple employee screen</small></button>
               <button onClick={() => { setOpType("receiving"); setTab("operations"); }}><span>⇩</span><strong>Receive</strong><small>Bakery delivery</small></button>
-              <button onClick={() => setTab("sales")}><span>▥</span><strong>Daily sales</strong><small>Read-only report</small></button>
-              <button onClick={() => setTab("oracle")}><span>◫</span><strong>Oracle</strong><small>Import and compare</small></button>
+              <button onClick={() => setTab("sales")}><span>▥</span><strong>Sales reports</strong><small>Daily, weekly, monthly</small></button>
               <button onClick={() => setTab("assistant")}><span>✦</span><strong>Assistant</strong><small>Stock questions</small></button>
             </div>
           </div>
@@ -549,7 +528,7 @@ export default function InventoryApp() {
         <section className="phone-actions" aria-label="Phone actions">
           <button className="phone-action" onClick={() => setTab("count")}><strong>New count</strong><span>Enter available stock</span></button>
           <button className="phone-action" onClick={() => { setOpType("receiving"); setTab("operations"); }}><strong>Receive</strong><span>From Bakery Warehouse</span></button>
-          <button className="phone-action" onClick={() => setTab("sales")}><strong>Daily sales</strong><span>Read-only report</span></button>
+          <button className="phone-action" onClick={() => setTab("sales")}><strong>Sales reports</strong><span>Daily, weekly, monthly</span></button>
           <button className="phone-action" onClick={() => setTab("assistant")}><strong>Ask assistant</strong><span>Stock and order help</span></button>
         </section>
         </>}
@@ -716,86 +695,44 @@ export default function InventoryApp() {
           </section>
         )}
 
-        {tab === "oracle" && (
-          <section className="card">
-            <div className="section-head">
-              <div>
-                <h2>Oracle read-only import</h2>
-                <p className="muted">Upload an Oracle CSV or Excel export. This screen cannot write to Oracle or approve transactions.</p>
-              </div>
-              <span className="badge ok">Read only</span>
-            </div>
-            <label className="oracle-upload">
-              <strong>Choose Oracle export</strong>
-              <span>CSV, XLSX or XLS • first worksheet</span>
-              <input type="file" accept=".csv,.xlsx,.xls" onChange={async event => {
-                const file = event.target.files?.[0];
-                if (!file) return;
-                try { await importOracleFile(file); }
-                catch (error) { console.error(error); alert("Could not read this Oracle export. Use CSV or Excel with column headings."); }
-                event.target.value = "";
-              }} />
-            </label>
-            {oracleFile && <div className="notice good">Loaded locally on this phone: <strong>{oracleFile}</strong></div>}
-            <div className="report-summary oracle-summary">
-              <div><span>Oracle lines</span><strong>{oracleRows.length}</strong></div>
-              <div><span>Expected</span><strong>{oracleExpected}</strong></div>
-              <div><span>Received</span><strong>{oracleReceived}</strong></div>
-              <div><span>Not matched</span><strong>{oracleUnmapped.length}</strong></div>
-            </div>
-            {!oracleRows.length ? <div className="notice">Export receiving or transfer-order lines from Oracle, then upload the file here.</div> : <>
-              <div className="table-wrap"><table className="tbl oracle-table"><thead><tr><th>Oracle item</th><th>Transfer order</th><th>Expected</th><th>Received</th><th>Difference</th><th>UoM</th><th>Hajj available</th><th>Status</th></tr></thead><tbody>
-                {oracleRows.map((row,index) => {
-                  const difference = row.received - row.expected;
-                  const available = row.productId && latest ? finalStock(latest,row.productId) : null;
-                  return <tr key={`${row.itemNumber}-${index}`}>
-                    <td><strong>{row.itemName || row.itemNumber}</strong>{row.itemNumber && <small className="table-sub">{row.itemNumber}</small>}</td>
-                    <td>{row.transferOrder || "—"}</td><td>{row.expected}</td><td>{row.received}</td>
-                    <td className={difference < 0 ? "value-bad" : difference > 0 ? "value-warn" : "value-good"}>{difference > 0 ? `+${difference}` : difference}</td>
-                    <td>{row.uom || "—"}</td><td>{available ?? "Not matched"}</td><td>{row.status || (difference === 0 ? "Complete" : "Check")}</td>
-                  </tr>;
-                })}
-              </tbody></table></div>
-              {oracleUnmapped.length > 0 && <div className="notice warn"><strong>{oracleUnmapped.length} Oracle item(s) not matched.</strong> Use the exact bakery MC item names so they can be compared with Hajj Terminal stock.</div>}
-              <div className="actions"><button className="btn" onClick={() => { setOracleRows([]); setOracleFile(""); localStorage.removeItem("hajj-oracle-readonly-v1"); localStorage.removeItem("hajj-oracle-readonly-file-v1"); }}>Clear local import</button></div>
-            </>}
-          </section>
-        )}
-
         {tab === "sales" && (
           <section className="card">
             <div className="section-head">
               <div>
-                <h2>Daily sales</h2>
-                <p className="muted">Read only • calculated from available stock after all receiving and the next physical count.</p>
+                <h2>Sales reports</h2>
+                <p className="muted">Read only • confirmed from physical counts and recorded receiving.</p>
               </div>
               <label className="stack sales-date">
-                Sales date
+                Report ending date
                 <select value={selectedSalesDate} onChange={event => setSalesDate(event.target.value)}>
                   {salesDates.map(reportDate => <option key={reportDate} value={reportDate}>{reportDate}</option>)}
                 </select>
               </label>
             </div>
-            {!sales.complete ? (
+            <div className="sales-period-tabs" role="group" aria-label="Sales report period">
+              {(["daily","weekly","monthly"] as SalesPeriod[]).map(period=><button key={period} className={salesPeriod===period?"active":""} onClick={()=>setSalesPeriod(period)}>{period[0].toUpperCase()+period.slice(1)}</button>)}
+            </div>
+            {!periodSales.days.length ? (
               <div className="notice">Sales become available after the next physical count is saved.</div>
             ) : (
               <>
                 <div className="report-summary sales-summary">
-                  <div><span>Sandwiches sold</span><strong>{sales.categoryTotals.Sandwiches}</strong></div>
-                  <div><span>Cakes sold</span><strong>{sales.categoryTotals.Cakes}</strong></div>
-                  <div><span>Croissants sold</span><strong>{sales.categoryTotals.Croissants}</strong></div>
-                  <div className="sales-total"><span>Total sold</span><strong>{sales.total}</strong></div>
+                  <div><span>Sandwiches sold</span><strong>{periodSales.categoryTotals.Sandwiches}</strong></div>
+                  <div><span>Cakes sold</span><strong>{periodSales.categoryTotals.Cakes}</strong></div>
+                  <div><span>Croissants sold</span><strong>{periodSales.categoryTotals.Croissants}</strong></div>
+                  <div className="sales-total"><span>Total sold</span><strong>{periodSales.total}</strong></div>
                 </div>
-                <div className="notice good">Sales for <strong>{sales.date}</strong> confirmed by the physical count on <strong>{sales.nextCountDate}</strong>.</div>
+                <div className="notice good"><strong>{salesPeriod[0].toUpperCase()+salesPeriod.slice(1)} report:</strong> {periodSales.startDate} to {periodSales.endDate} · {periodSales.days.length} confirmed day{periodSales.days.length===1?"":"s"}.</div>
+                {salesPeriod!=="daily"&&<div className="sales-trend"><h3>Sales by day</h3>{periodSales.days.map(day=><div className="sales-trend-row" key={day.date}><span>{day.date}</span><div><i style={{width:`${periodSales.total?Math.max(3,(day.total/Math.max(...periodSales.days.map(d=>d.total)))*100):0}%`}} /></div><strong>{day.total}</strong></div>)}</div>}
                 {CATEGORIES.map(category => (
                   <div className="sales-category" key={category}>
                     <h3>{category}</h3>
                     <div className="available-grid">
-                      {sales.rows.filter(row => row.category === category).map(row => (
-                        <div className={`sales-item ${row.discrepancy ? "discrepancy" : ""}`} key={row.productId}>
+                      {periodSales.rows.filter(row => row.category === category).map(row => (
+                        <div className={`sales-item ${row.discrepancyDays ? "discrepancy" : ""}`} key={row.productId}>
                           <span>{productName(row.productId)}</span>
-                          <strong>{row.discrepancy ? "Check" : row.sold}</strong>
-                          <small>{row.discrepancy ? "Stock increased without a recorded event" : `${row.openingAvailable} → ${row.nextCount}${row.potentialStockout ? "+" : ""}`}</small>
+                          <strong>{row.sold}</strong>
+                          <small>{row.discrepancyDays ? `${row.discrepancyDays} day(s) need checking` : `${salesPeriod} confirmed sales`}</small>
                         </div>
                       ))}
                     </div>
