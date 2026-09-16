@@ -67,6 +67,8 @@ describe("movement and forecast engine", () => {
   it("aggregates read-only weekly sales from completed days", () => {
     const report = salesPeriodReport(seedRecords(), "weekly", "2026-09-12");
     expect(report.days.length).toBeGreaterThan(0);
+    expect(report.expectedDays).toBe(7);
+    expect(report.missingDates).toHaveLength(5);
     expect(report.total).toBe(report.categoryTotals.Sandwiches+report.categoryTotals.Cakes+report.categoryTotals.Croissants);
   });
 
