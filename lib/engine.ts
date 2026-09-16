@@ -152,13 +152,16 @@ export function dailySalesReport(records: DailyRecord[], date: string) {
 export type SalesPeriod = "daily" | "weekly" | "monthly";
 
 export function salesPeriodReport(records: DailyRecord[], period: SalesPeriod, anchorDate: string) {
-  if (!anchorDate) return { period, startDate:"", endDate:"", days:[], rows:[], categoryTotals:Object.fromEntries(CATEGORIES.map(c=>[c,0])) as Record<(typeof CATEGORIES)[number],number>, total:0 };
+  if (!anchorDate) return { period, startDate:"", endDate:"", expectedDays:0, missingDates:[], days:[], rows:[], categoryTotals:Object.fromEntries(CATEGORIES.map(c=>[c,0])) as Record<(typeof CATEGORIES)[number],number>, total:0 };
   const startDate = period === "daily"
     ? anchorDate
     : period === "weekly"
       ? addDays(anchorDate,-6)
       : `${anchorDate.slice(0,7)}-01`;
-  const completeDates = sorted(records).slice(0,-1).map(record=>record.date).filter(date=>date>=startDate&&date<=anchorDate);
+  const expectedDates:string[]=[];
+  for(let date=startDate;date<=anchorDate;date=addDays(date,1)) expectedDates.push(date);
+  const completeDates = [...new Set(sorted(records).slice(0,-1).map(record=>record.date).filter(date=>date>=startDate&&date<=anchorDate))];
+  const missingDates=expectedDates.filter(date=>!completeDates.includes(date));
   const days = completeDates.map(date=>dailySalesReport(records,date)).filter(report=>report.complete);
   const rows = PRODUCTS.map(product=>({
     productId:product.id,
@@ -169,7 +172,7 @@ export function salesPeriodReport(records: DailyRecord[], period: SalesPeriod, a
   const categoryTotals = Object.fromEntries(CATEGORIES.map(category=>[
     category,rows.filter(row=>row.category===category).reduce((sum,row)=>sum+row.sold,0)
   ])) as Record<(typeof CATEGORIES)[number],number>;
-  return {period,startDate,endDate:anchorDate,days,rows,categoryTotals,total:Object.values(categoryTotals).reduce((sum,value)=>sum+value,0)};
+  return {period,startDate,endDate:anchorDate,expectedDays:expectedDates.length,missingDates,days,rows,categoryTotals,total:Object.values(categoryTotals).reduce((sum,value)=>sum+value,0)};
 }
 
 export function avg(values: number[], days: number): number {
