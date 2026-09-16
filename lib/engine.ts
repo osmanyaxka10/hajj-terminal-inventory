@@ -25,6 +25,10 @@ export function sorted(records: DailyRecord[]) {
   );
 }
 
+export function hasCountForDate(records: DailyRecord[], date: string) {
+  return records.some(record => record.date === date);
+}
+
 export function rawMovement(
   previous: DailyRecord,
   current: DailyRecord,
