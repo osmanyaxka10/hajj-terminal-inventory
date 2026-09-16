@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CATEGORIES, PRODUCTS } from "@/lib/products";
 import {
   emptyMap,
+  dailySalesReport,
   finalStock,
   movementRows,
   movementReport,
@@ -42,7 +43,7 @@ import { openGoogleCalendarDraft } from "@/lib/calendar";
 import { downloadFullBackup } from "@/lib/backup";
 import { askInventoryAI } from "@/lib/ai";
 
-type Tab = "count" | "expiry" | "operations" | "movement" | "reports" | "orders" | "intelligence" | "assistant" | "quick" | "history";
+type Tab = "count" | "expiry" | "operations" | "sales" | "movement" | "reports" | "orders" | "intelligence" | "assistant" | "quick" | "history";
 
 function nowDate() {
   const d = new Date();
@@ -75,6 +76,7 @@ export default function InventoryApp() {
   const [forecastSummary, setForecastSummary] = useState<ForecastSummary>({overallAccuracy:null,bestProduct:null,worstProduct:null,mostUnderForecast:null,mostOverForecast:null,reconciledRows:0});
   const [tab, setTab] = useState<Tab>("count");
   const [reportDays, setReportDays] = useState<7 | 30>(7);
+  const [salesDate, setSalesDate] = useState("");
 
   const [date, setDate] = useState(nowDate());
   const [time, setTime] = useState(nowTime());
@@ -166,6 +168,9 @@ export default function InventoryApp() {
   const latest = ordered.at(-1) ?? null;
   const movement = useMemo(() => movementRows(records), [records]);
   const report = useMemo(() => movementReport(records, reportDays), [records, reportDays]);
+  const salesDates = useMemo(() => ordered.slice(0, -1).map(record => record.date), [ordered]);
+  const selectedSalesDate = salesDate || salesDates.at(-1) || "";
+  const sales = useMemo(() => dailySalesReport(records, selectedSalesDate), [records, selectedSalesDate]);
   const recs = useMemo(() => recommend(records, mode), [records, mode]);
   const orderFor = useMemo(() => recommendedOrderDate(records, mode), [records, mode]);
   const sum = totals(latest);
@@ -446,12 +451,13 @@ export default function InventoryApp() {
         <section className="phone-actions" aria-label="Phone actions">
           <button className="phone-action" onClick={() => setTab("count")}><strong>New count</strong><span>Enter available stock</span></button>
           <button className="phone-action" onClick={() => { setOpType("receiving"); setTab("operations"); }}><strong>Receive</strong><span>From Bakery Warehouse</span></button>
+          <button className="phone-action" onClick={() => setTab("sales")}><strong>Daily sales</strong><span>Read-only report</span></button>
           <button className="phone-action" onClick={() => setTab("assistant")}><strong>Ask assistant</strong><span>Stock and order help</span></button>
         </section>
 
         <nav className="tabs">
           {(
-            ["count", "expiry", "operations", "movement", "reports", "orders", "intelligence", "assistant", "quick", "history"] as Tab[]
+            ["count", "expiry", "operations", "sales", "movement", "reports", "orders", "intelligence", "assistant", "quick", "history"] as Tab[]
           ).map(x => (
             <button
               key={x}
@@ -622,6 +628,50 @@ export default function InventoryApp() {
               </button>
               <button className="btn" onClick={() => setOpQty(emptyMap())}>Clear quantities</button>
             </div>
+          </section>
+        )}
+
+        {tab === "sales" && (
+          <section className="card">
+            <div className="section-head">
+              <div>
+                <h2>Daily sales</h2>
+                <p className="muted">Read only • calculated from available stock after all receiving and the next physical count.</p>
+              </div>
+              <label className="stack sales-date">
+                Sales date
+                <select value={selectedSalesDate} onChange={event => setSalesDate(event.target.value)}>
+                  {salesDates.map(reportDate => <option key={reportDate} value={reportDate}>{reportDate}</option>)}
+                </select>
+              </label>
+            </div>
+            {!sales.complete ? (
+              <div className="notice">Sales become available after the next physical count is saved.</div>
+            ) : (
+              <>
+                <div className="report-summary sales-summary">
+                  <div><span>Sandwiches sold</span><strong>{sales.categoryTotals.Sandwiches}</strong></div>
+                  <div><span>Cakes sold</span><strong>{sales.categoryTotals.Cakes}</strong></div>
+                  <div><span>Croissants sold</span><strong>{sales.categoryTotals.Croissants}</strong></div>
+                  <div className="sales-total"><span>Total sold</span><strong>{sales.total}</strong></div>
+                </div>
+                <div className="notice good">Sales for <strong>{sales.date}</strong> confirmed by the physical count on <strong>{sales.nextCountDate}</strong>.</div>
+                {CATEGORIES.map(category => (
+                  <div className="sales-category" key={category}>
+                    <h3>{category}</h3>
+                    <div className="available-grid">
+                      {sales.rows.filter(row => row.category === category).map(row => (
+                        <div className={`sales-item ${row.discrepancy ? "discrepancy" : ""}`} key={row.productId}>
+                          <span>{productName(row.productId)}</span>
+                          <strong>{row.discrepancy ? "Check" : row.sold}</strong>
+                          <small>{row.discrepancy ? "Stock increased without a recorded event" : `${row.openingAvailable} → ${row.nextCount}${row.potentialStockout ? "+" : ""}`}</small>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </section>
         )}
 
