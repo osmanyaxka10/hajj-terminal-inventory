@@ -98,6 +98,53 @@ export function movementReport(records: DailyRecord[], days: 7 | 30) {
   };
 }
 
+export function dailySalesReport(records: DailyRecord[], date: string) {
+  const a = sorted(records);
+  const index = a.findIndex(record => record.date === date);
+  const previous = index >= 0 ? a[index] : null;
+  const next = index >= 0 ? a[index + 1] : null;
+
+  const rows = PRODUCTS.map(product => {
+    if (!previous || !next) {
+      return {
+        productId: product.id,
+        category: product.category,
+        openingAvailable: previous ? finalStock(previous, product.id) : null,
+        nextCount: null,
+        sold: null,
+        discrepancy: false,
+        potentialStockout: false
+      };
+    }
+    const result = rawMovement(previous, next, product.id);
+    return {
+      productId: product.id,
+      category: product.category,
+      openingAvailable: finalStock(previous, product.id),
+      nextCount: n(next.physical[product.id]),
+      sold: result.movement,
+      discrepancy: result.discrepancy,
+      potentialStockout: result.potentialStockout
+    };
+  });
+
+  const categoryTotals = Object.fromEntries(
+    CATEGORIES.map(category => [
+      category,
+      rows.filter(row => row.category === category).reduce((sum, row) => sum + (row.sold ?? 0), 0)
+    ])
+  ) as Record<(typeof CATEGORIES)[number], number>;
+
+  return {
+    date,
+    nextCountDate: next?.date ?? null,
+    complete: Boolean(previous && next),
+    rows,
+    categoryTotals,
+    total: Object.values(categoryTotals).reduce((sum, value) => sum + value, 0)
+  };
+}
+
 export function avg(values: number[], days: number): number {
   const v = values.slice(-days);
   return v.length ? v.reduce((s, x) => s + x, 0) / v.length : 0;
